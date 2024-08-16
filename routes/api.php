@@ -11,21 +11,15 @@ Route::middleware('auth.server')->get('', function () {
     return Auth::guard('server')->user();
 });
 
-Route::get('/otp-generate', function () {
-    $otp = OtpClient::generateOtp();
-
-    if ($otp->success) {
-        $message = 'OTP: ' . $otp->code;
-
-        NotificationClient::sendMessage(Provider::TELEGRAM, Channel::OTP, $message);
-    }
-
-    return response()->json($otp);
+Route::middleware('otp.generate')->group(function () {
+    Route::get('/discount-make', function () {
+        return 'make';
+    });
 });
 
 Route::middleware('otp')->group(function () {
-    Route::get('/otp-pass', function () {
-        return true;
+    Route::get('/discount-submit', function () {
+        return 'submit';
     });
 });
 
