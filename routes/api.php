@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Route;
 use Shared\Clients\DeviceClient;
-use Shared\Device\ScheduleEnum;
+use Shared\Enums\ScheduleEnum;
 use Shared\Enums\SessionStatusEnum;
 use Shared\Enums\SessionTariffEnum;
 use Shared\Enums\SessionTimeEnum;
