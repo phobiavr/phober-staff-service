@@ -2,11 +2,12 @@
 
 use App\Http\Requests\SessionStoreRequest;
 use App\Http\Resources\SessionResource;
-use App\Models\Session;
+use App\Models\Invoice;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Route;
 use Shared\Clients\DeviceClient;
+use Shared\Enums\InvoiceStatusEnum;
 use Shared\Enums\ScheduleEnum;
 use Shared\Enums\SessionStatusEnum;
 use Shared\Enums\SessionTariffEnum;
@@ -35,6 +36,9 @@ Route::middleware('auth.server')->group(function () {
         $tariff = $now > $noon ? SessionTariffEnum::EVENING : SessionTariffEnum::MORNING;
         $time = SessionTimeEnum::from($request->get('tariff'));
         $instanceId = $request->get('instance_id');
+        $invoiceId = $request->get('invoice_id');
+        $customerId = $request->get('customer_id');
+        $employeeId = $request->get('serviced_by');
 
         if (!($isQueue = ($request->get('queue') !== false))) {
             $end = clone $now;
@@ -52,9 +56,16 @@ Route::middleware('auth.server')->group(function () {
             return $plan->json();
         }
 
-        $session = Session::create([
+        if (!$invoice = Invoice::where('id', $invoiceId)->where('status', InvoiceStatusEnum::QUEUE)->first()) {
+            $invoice = Invoice::create([
+                'customer_id' => $customerId,
+                'status'      => InvoiceStatusEnum::QUEUE
+            ]);
+        }
+
+        $session = $invoice->sessions()->create([
             "instance_id" => $instanceId,
-            "serviced_by" => $request->get('serviced_by'),
+            "serviced_by" => $employeeId,
             "time"        => $time->getMins(),
             "price"       => $plan->json('price', 0),
             "status"      => $isQueue ? SessionStatusEnum::QUEUE : SessionStatusEnum::ACTIVE
