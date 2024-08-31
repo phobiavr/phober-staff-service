@@ -17,6 +17,7 @@ class SessionStoreRequest extends FormRequest {
             'instance_id' => ['required'],
             'serviced_by' => ['required', 'exists:employees,id'],
             'tariff'      => ['required', Rule::enum(SessionTimeEnum::class)],
+            'queue'       => ['bool']
         ];
     }
 }

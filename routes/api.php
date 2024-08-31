@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Requests\SessionStoreRequest;
+use App\Http\Resources\SessionResource;
 use App\Models\Session;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
@@ -34,28 +35,32 @@ Route::middleware('auth.server')->group(function () {
         $tariff = $now > $noon ? SessionTariffEnum::EVENING : SessionTariffEnum::MORNING;
         $time = SessionTimeEnum::from($request->get('tariff'));
         $instanceId = $request->get('instance_id');
-        $end = clone $now;
-        $end->add(new DateInterval('PT' . $time->getMins() . 'M'));
 
-        //TODO:: make a config for updating, its' needed for reserve before session starts
-        $end->add(new DateInterval('PT5M'));
+        if (!($isQueue = ($request->get('queue') !== false))) {
+            $end = clone $now;
+            $end->add(new DateInterval('PT' . $time->getMins() . 'M'));
 
-        $schedule = DeviceClient::schedule(ScheduleEnum::IN_SESSION, $instanceId, $now, $end);
+            //TODO:: make a config for updating, its' needed for reserve before session starts
+            $end->add(new DateInterval('PT5M'));
 
-        if ($schedule->failed()) {
-            return $schedule->json();
+            if (($schedule = DeviceClient::schedule(ScheduleEnum::IN_SESSION, $instanceId, $now, $end))->failed()) {
+                return $schedule->json();
+            }
+        }
+
+        if (($plan = DeviceClient::price($instanceId, $tariff, $time))->failed()) {
+            return $plan->json();
         }
 
         $session = Session::create([
             "instance_id" => $instanceId,
             "serviced_by" => $request->get('serviced_by'),
             "time"        => $time->getMins(),
-            "tariff"      => $tariff->value,
-            "price"       => 15, //TODO:: update price logic,
-            "status"      => SessionStatusEnum::QUEUE
+            "price"       => $plan->json('price', 0),
+            "status"      => $isQueue ? SessionStatusEnum::QUEUE : SessionStatusEnum::ACTIVE
         ]);
 
-        return Response::json($session->toArray());
+        return Response::json(SessionResource::make($session));
     });
 });
 
