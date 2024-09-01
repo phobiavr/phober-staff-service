@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Invoice extends Model {
     protected $fillable = ['customer_id', 'status', 'payment_method', 'customer'];
 
-    public function sessions(): BelongsToMany {
-        return $this->belongsToMany(Session::class, 'invoice_session');
+    public function sessions(): HasMany {
+        return $this->hasMany(Session::class);
     }
 
     public function snackSales(): HasMany {

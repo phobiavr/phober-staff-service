@@ -95,7 +95,7 @@ Route::middleware('auth.server')->group(function () {
     });
 
     Route::delete('/sessions/{id}', function ($id) {
-        $session = Session::whereIn('status', [SessionStatusEnum::QUEUE->value, SessionStatusEnum::ACTIVE])->findOrFail($id);
+        $session = Session::whereIn('status', [SessionStatusEnum::QUEUE->value, SessionStatusEnum::ACTIVE->value])->findOrFail($id);
 
         if ($session->schedule_id) {
             DeviceClient::deleteSchedule($session->schedule_id);
@@ -140,6 +140,20 @@ Route::middleware('auth.server')->group(function () {
         $session->save();
 
         return Response::json('', ResponseFoundation::HTTP_NO_CONTENT);
+    });
+});
+
+Route::middleware('private')->group(function () {
+    Route::get('/sessions/byScheduleId/{scheduleId}', function ($scheduleId) {
+        $session = Session::where('schedule_id', $scheduleId)->firstOrFail();
+
+        $result = [
+            'serviced_by' => $session->servicedBy->full_name,
+            'time'        => $session->time,
+            'customer'    => $session->invoice->customer
+        ];
+
+        return Response::json($result);
     });
 });
 
