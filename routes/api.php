@@ -44,7 +44,7 @@ Route::middleware('auth.server')->group(function () {
         $now = new DateTime(now()->format('Y-m-d H:i:s'));
         $noon = new DateTime($now->format('Y-m-d') . ' 12:00:00');
         $tariff = $now > $noon ? SessionTariffEnum::EVENING : SessionTariffEnum::MORNING;
-        $time = SessionTimeEnum::from($request->get('tariff'));
+        $time = SessionTimeEnum::from($request->get('time'));
         $instanceId = $request->get('instance_id');
         $invoiceId = $request->get('invoice_id');
         $customer = $request->get('customer', 'Quest');
@@ -52,7 +52,7 @@ Route::middleware('auth.server')->group(function () {
         $employeeId = $request->get('serviced_by');
         $scheduleId = null;
 
-        if (!($isQueue = ($request->get('queue') !== false))) {
+        if ($isScheduled = $request->get('schedule', false)) {
             $end = clone $now;
             $end->add(new DateInterval('PT' . $time->getMins() . 'M'));
 
@@ -88,20 +88,55 @@ Route::middleware('auth.server')->group(function () {
             "serviced_by" => $employeeId,
             "time"        => $time->getMins(),
             "price"       => $plan->json('price', 0),
-            "status"      => $isQueue ? SessionStatusEnum::QUEUE : SessionStatusEnum::ACTIVE
+            "status"      => $isScheduled ? SessionStatusEnum::ACTIVE : SessionStatusEnum::QUEUE
         ]);
 
         return Response::json(SessionResource::make($session));
     });
 
     Route::delete('/sessions/{id}', function ($id) {
-        $session = Session::where('status', '<>', SessionStatusEnum::CANCELED)->findOrFail($id);
+        $session = Session::whereIn('status', [SessionStatusEnum::QUEUE->value, SessionStatusEnum::ACTIVE])->findOrFail($id);
 
         if ($session->schedule_id) {
             DeviceClient::deleteSchedule($session->schedule_id);
         }
 
         $session->status = SessionStatusEnum::CANCELED;
+        $session->save();
+
+        return Response::json('', ResponseFoundation::HTTP_NO_CONTENT);
+    });
+
+    Route::put('/sessions/{id}/start', function (int $id) {
+        $session = Session::where('status', SessionStatusEnum::QUEUE->value)->findOrFail($id);
+
+        $now = new DateTime(now()->format('Y-m-d H:i:s'));
+        $end = clone $now;
+        $end->add(new DateInterval('PT' . $session->time . 'M'));
+
+        $end->add(new DateInterval('PT5M'));
+
+        if (($schedule = DeviceClient::schedule(ScheduleEnum::IN_SESSION, $session->instance_id, $now, $end))->failed()) {
+            return $schedule->json();
+        }
+
+        $scheduleId = $schedule->json('id');
+
+        $session->status = SessionStatusEnum::ACTIVE;
+        $session->schedule_id = $scheduleId;
+        $session->save();
+
+        return Response::json('', ResponseFoundation::HTTP_NO_CONTENT);
+    });
+
+    Route::put('/sessions/{id}/finish', function (int $id) {
+        $session = Session::where('status', SessionStatusEnum::ACTIVE->value)->findOrFail($id);
+
+        if ($session->schedule_id) {
+            DeviceClient::deleteSchedule($session->schedule_id);
+        }
+
+        $session->status = SessionStatusEnum::FINISHED;
         $session->save();
 
         return Response::json('', ResponseFoundation::HTTP_NO_CONTENT);
