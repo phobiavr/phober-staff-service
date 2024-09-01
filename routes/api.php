@@ -8,6 +8,7 @@ use App\Models\Session;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Route;
+use Shared\Clients\CrmClient;
 use Shared\Clients\DeviceClient;
 use Shared\Enums\InvoiceStatusEnum;
 use Shared\Enums\ScheduleEnum;
@@ -46,6 +47,7 @@ Route::middleware('auth.server')->group(function () {
         $time = SessionTimeEnum::from($request->get('tariff'));
         $instanceId = $request->get('instance_id');
         $invoiceId = $request->get('invoice_id');
+        $customer = $request->get('customer', 'Quest');
         $customerId = $request->get('customer_id');
         $employeeId = $request->get('serviced_by');
         $scheduleId = null;
@@ -69,8 +71,13 @@ Route::middleware('auth.server')->group(function () {
         }
 
         if (!$invoice = Invoice::where('id', $invoiceId)->where('status', InvoiceStatusEnum::QUEUE)->first()) {
+            if ($customerId && !(($customerFromService = CrmClient::customer($customerId))->failed())) {
+                $customer = $customerFromService->json('full_name');
+            }
+
             $invoice = Invoice::create([
                 'customer_id' => $customerId,
+                'customer'    => $customer,
                 'status'      => InvoiceStatusEnum::QUEUE
             ]);
         }

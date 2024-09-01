@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Invoice extends Model {
-    protected $fillable = ['customer_id', 'status', 'payment_method'];
+    protected $fillable = ['customer_id', 'status', 'payment_method', 'customer'];
 
     public function sessions(): BelongsToMany {
         return $this->belongsToMany(Session::class, 'invoice_session');
