@@ -11,6 +11,6 @@ class Session extends Model {
     protected static $authorableType = "staff-session";
 
     protected $fillable = [
-        "instance_id", "serviced_by", "time", "tariff", "price", "status"
+        "instance_id", "schedule_id", "serviced_by", "time", "tariff", "price", "status"
     ];
 }

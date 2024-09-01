@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Requests\SessionStoreRequest;
+use App\Http\Resources\InvoiceResource;
 use App\Http\Resources\SessionResource;
 use App\Models\Invoice;
+use App\Models\Session;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Route;
@@ -12,6 +14,7 @@ use Shared\Enums\ScheduleEnum;
 use Shared\Enums\SessionStatusEnum;
 use Shared\Enums\SessionTariffEnum;
 use Shared\Enums\SessionTimeEnum;
+use Symfony\Component\HttpFoundation\Response as ResponseFoundation;
 
 Route::middleware('otp.generate')->group(function () {
     Route::get('/discount-make', function () {
@@ -30,7 +33,13 @@ Route::middleware('auth.server')->group(function () {
         return Auth::guard('server')->user();
     });
 
-    Route::post('/session', function (SessionStoreRequest $request) {
+    Route::get('/invoices', function () {
+        $invoices = Invoice::all();
+
+        return Response::json(InvoiceResource::collection($invoices));
+    });
+
+    Route::post('/sessions', function (SessionStoreRequest $request) {
         $now = new DateTime(now()->format('Y-m-d H:i:s'));
         $noon = new DateTime($now->format('Y-m-d') . ' 12:00:00');
         $tariff = $now > $noon ? SessionTariffEnum::EVENING : SessionTariffEnum::MORNING;
@@ -39,6 +48,7 @@ Route::middleware('auth.server')->group(function () {
         $invoiceId = $request->get('invoice_id');
         $customerId = $request->get('customer_id');
         $employeeId = $request->get('serviced_by');
+        $scheduleId = null;
 
         if (!($isQueue = ($request->get('queue') !== false))) {
             $end = clone $now;
@@ -50,6 +60,8 @@ Route::middleware('auth.server')->group(function () {
             if (($schedule = DeviceClient::schedule(ScheduleEnum::IN_SESSION, $instanceId, $now, $end))->failed()) {
                 return $schedule->json();
             }
+
+            $scheduleId = $schedule->json('id');
         }
 
         if (($plan = DeviceClient::price($instanceId, $tariff, $time))->failed()) {
@@ -65,6 +77,7 @@ Route::middleware('auth.server')->group(function () {
 
         $session = $invoice->sessions()->create([
             "instance_id" => $instanceId,
+            "schedule_id" => $scheduleId,
             "serviced_by" => $employeeId,
             "time"        => $time->getMins(),
             "price"       => $plan->json('price', 0),
@@ -72,6 +85,19 @@ Route::middleware('auth.server')->group(function () {
         ]);
 
         return Response::json(SessionResource::make($session));
+    });
+
+    Route::delete('/sessions/{id}', function ($id) {
+        $session = Session::where('status', '<>', SessionStatusEnum::CANCELED)->findOrFail($id);
+
+        if ($session->schedule_id) {
+            DeviceClient::deleteSchedule($session->schedule_id);
+        }
+
+        $session->status = SessionStatusEnum::CANCELED;
+        $session->save();
+
+        return Response::json('', ResponseFoundation::HTTP_NO_CONTENT);
     });
 });
 
