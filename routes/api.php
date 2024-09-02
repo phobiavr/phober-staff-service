@@ -21,13 +21,13 @@ use Shared\Enums\SessionTimeEnum;
 use Symfony\Component\HttpFoundation\Response as ResponseFoundation;
 
 Route::middleware('otp.generate')->group(function () {
-    Route::get('/discount-make', function () {
+    Route::get('/otp/make', function () {
         return 'make';
     });
 });
 
 Route::middleware('otp')->group(function () {
-    Route::get('/discount-submit', function () {
+    Route::get('/otp/submit', function () {
         return 'submit';
     });
 });
@@ -181,9 +181,10 @@ Route::middleware('auth.server')->group(function () {
         $snack->stock -= $quantity;
         $snack->save();
 
-         $invoice->snackSales()->create([
-            "snack_id" => $snackId,
+        $invoice->snackSales()->create([
+            "snack"    => $snack->name,
             "quantity" => $quantity,
+            "price"    => $snack->price,
         ]);
 
         return Response::json(status: ResponseFoundation::HTTP_NO_CONTENT);

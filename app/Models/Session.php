@@ -22,4 +22,8 @@ class Session extends Model {
     public function invoice(): BelongsTo {
         return $this->belongsTo(Invoice::class, 'invoice_id');
     }
+
+    public function getEndPriceAttribute() {
+        return $this->price - ($this->discount * 0.1);
+    }
 }

@@ -11,11 +11,7 @@ class SnackSale extends Model {
 
     protected static $authorableType = "staff-snack-sale";
 
-    protected $fillable = ['snack_id', 'quantity'];
-
-    public function snack(): BelongsTo {
-        return $this->belongsTo(Snack::class);
-    }
+    protected $fillable = ['snack', 'quantity', 'price'];
 
     public function invoice(): BelongsTo {
         return $this->belongsTo(Invoice::class, 'invoice_id');
