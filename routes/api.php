@@ -107,7 +107,7 @@ Route::middleware('auth.server')->group(function () {
         $session->status = SessionStatusEnum::CANCELED;
         $session->save();
 
-        return Response::json('', ResponseFoundation::HTTP_NO_CONTENT);
+        return Response::json(status: ResponseFoundation::HTTP_NO_CONTENT);
     });
 
     Route::put('/sessions/{id}/start', function (int $id) {
@@ -129,7 +129,7 @@ Route::middleware('auth.server')->group(function () {
         $session->schedule_id = $scheduleId;
         $session->save();
 
-        return Response::json('', ResponseFoundation::HTTP_NO_CONTENT);
+        return Response::json(status: ResponseFoundation::HTTP_NO_CONTENT);
     });
 
     Route::put('/sessions/{id}/finish', function (int $id) {
@@ -142,7 +142,16 @@ Route::middleware('auth.server')->group(function () {
         $session->status = SessionStatusEnum::FINISHED;
         $session->save();
 
-        return Response::json('', ResponseFoundation::HTTP_NO_CONTENT);
+        return Response::json(status: ResponseFoundation::HTTP_NO_CONTENT);
+    });
+
+    Route::get('/sessions/{id}/discount/{discount}', function (int $id, float $discount) {
+        $session = Session::where('status', SessionStatusEnum::ACTIVE->value)->findOrFail($id);
+
+        $session->discount = $discount;
+        $session->save();
+
+        return Response::json(status: ResponseFoundation::HTTP_NO_CONTENT);
     });
 
     Route::get('/snacks', function () {
@@ -177,7 +186,7 @@ Route::middleware('auth.server')->group(function () {
             "quantity" => $quantity,
         ]);
 
-        return Response::json('', ResponseFoundation::HTTP_NO_CONTENT);
+        return Response::json(status: ResponseFoundation::HTTP_NO_CONTENT);
     });
 });
 
