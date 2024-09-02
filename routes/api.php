@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Requests\InvoiceRequest;
 use App\Http\Requests\SessionStoreRequest;
 use App\Http\Requests\SnackDealRequest;
 use App\Http\Resources\InvoiceResource;
@@ -41,6 +42,25 @@ Route::middleware('auth.server')->group(function () {
         $invoices = Invoice::all();
 
         return Response::json(InvoiceResource::collection($invoices));
+    });
+
+    Route::put('/invoices/{id}', function ($id, InvoiceRequest $request) {
+        $invoice = Invoice::where('status', InvoiceStatusEnum::QUEUE->value)->findOrFail($id);
+
+        $invoice->status = InvoiceStatusEnum::PAYED;
+        $invoice->payment_method = $request->get('method');
+        $invoice->save();
+
+        return Response::json(status: ResponseFoundation::HTTP_NO_CONTENT);
+    });
+
+    Route::delete('/invoices/{id}', function ($id) {
+        $invoice = Invoice::where('status', InvoiceStatusEnum::QUEUE->value)->findOrFail($id);
+
+        $invoice->status = InvoiceStatusEnum::CANCELED;
+        $invoice->save();
+
+        return Response::json(status: ResponseFoundation::HTTP_NO_CONTENT);
     });
 
     Route::post('/sessions', function (SessionStoreRequest $request) {
