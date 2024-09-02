@@ -155,6 +155,7 @@ return [
          * Package Service Providers...
          */
         \Shared\SharedServiceProvider::class,
+        \App\Providers\AppServiceProvider::class
     ],
 
     /*

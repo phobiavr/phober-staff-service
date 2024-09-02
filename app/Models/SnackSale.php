@@ -9,8 +9,6 @@ use Shared\Traits\Authorable;
 class SnackSale extends Model {
     use Authorable;
 
-    protected static $authorableType = "staff-snack-sale";
-
     protected $fillable = ['snack', 'quantity', 'price'];
 
     public function invoice(): BelongsTo {
