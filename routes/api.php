@@ -1,10 +1,13 @@
 <?php
 
 use App\Http\Requests\SessionStoreRequest;
+use App\Http\Requests\SnackDealRequest;
 use App\Http\Resources\InvoiceResource;
 use App\Http\Resources\SessionResource;
+use App\Http\Resources\SnackResource;
 use App\Models\Invoice;
 use App\Models\Session;
+use App\Models\Snack;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Route;
@@ -47,8 +50,8 @@ Route::middleware('auth.server')->group(function () {
         $time = SessionTimeEnum::from($request->get('time'));
         $instanceId = $request->get('instance_id');
         $invoiceId = $request->get('invoice_id');
-        $customer = $request->get('customer', 'Quest');
         $customerId = $request->get('customer_id');
+        $customer = $request->get('customer', 'Quest');
         $employeeId = $request->get('serviced_by');
         $scheduleId = null;
 
@@ -138,6 +141,41 @@ Route::middleware('auth.server')->group(function () {
 
         $session->status = SessionStatusEnum::FINISHED;
         $session->save();
+
+        return Response::json('', ResponseFoundation::HTTP_NO_CONTENT);
+    });
+
+    Route::get('/snacks', function () {
+        return Response::json(SnackResource::collection(Snack::all()));
+    });
+
+    Route::post('/snacks', function (SnackDealRequest $request) {
+        $snackId = $request->get('snack_id');
+        $quantity = $request->get('quantity');
+        $invoiceId = $request->get('invoice_id');
+        $customerId = $request->get('customer_id');
+        $customer = $request->get('customer', 'Quest');
+
+        if (!$invoice = Invoice::where('id', $invoiceId)->where('status', InvoiceStatusEnum::QUEUE)->first()) {
+            if ($customerId && !(($customerFromService = CrmClient::customer($customerId))->failed())) {
+                $customer = $customerFromService->json('full_name');
+            }
+
+            $invoice = Invoice::create([
+                'customer_id' => $customerId,
+                'customer'    => $customer,
+                'status'      => InvoiceStatusEnum::QUEUE
+            ]);
+        }
+
+        $snack = Snack::findOrFail($snackId);
+        $snack->stock -= $quantity;
+        $snack->save();
+
+         $invoice->snackSales()->create([
+            "snack_id" => $snackId,
+            "quantity" => $quantity,
+        ]);
 
         return Response::json('', ResponseFoundation::HTTP_NO_CONTENT);
     });
