@@ -14,4 +14,8 @@ class SnackSale extends Model {
     public function invoice(): BelongsTo {
         return $this->belongsTo(Invoice::class, 'invoice_id');
     }
+
+    public function getTotalAttribute() {
+        return $this->price * $this->quantity;
+    }
 }

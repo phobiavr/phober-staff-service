@@ -13,10 +13,13 @@ class InvoiceResource extends JsonResource {
      */
     public function toArray($request) {
         return [
-            "id"          => $this->id,
-            "customer_id" => $this->customer_id,
-            "status"      => $this->status,
-            'sessions'    => SessionResource::collection($this->sessions)
+            "id"             => $this->id,
+            "customer_id"    => $this->customer_id,
+            "status"         => $this->status,
+            'sessions'       => SessionResource::collection($this->sessions),
+            'snack_sales'    => SnackSaleResource::collection($this->snackSales),
+            'payment_method' => $this->payment_method,
+            'total'          => $this->total,
         ];
     }
 }
