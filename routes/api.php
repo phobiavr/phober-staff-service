@@ -3,9 +3,11 @@
 use App\Http\Requests\InvoiceRequest;
 use App\Http\Requests\SessionStoreRequest;
 use App\Http\Requests\SnackDealRequest;
+use App\Http\Resources\EmployeeResource;
 use App\Http\Resources\InvoiceResource;
 use App\Http\Resources\SessionResource;
 use App\Http\Resources\SnackResource;
+use App\Models\Employee;
 use App\Models\Invoice;
 use App\Models\Session;
 use App\Models\Snack;
@@ -36,6 +38,12 @@ Route::middleware('otp')->group(function () {
 Route::middleware('auth.server')->group(function () {
     Route::get('', function () {
         return Auth::guard('server')->user();
+    });
+
+    Route::get('/employees', function () {
+        $employees = Employee::all();
+
+        return Response::json(EmployeeResource::collection($employees));
     });
 
     Route::get('/invoices', function () {
