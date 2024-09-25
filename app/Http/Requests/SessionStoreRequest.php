@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Shared\Enums\SessionTimeEnum;
+use Phobiavr\PhoberLaravelCommon\Enums\SessionTimeEnum;
 
 class SessionStoreRequest extends FormRequest {
     /**

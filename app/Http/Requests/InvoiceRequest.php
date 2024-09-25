@@ -6,8 +6,8 @@ use App\Models\Invoice;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Validator as ValidatorFacade;
 use Illuminate\Validation\Validator;
-use Shared\Enums\InvoicePaymentMethodEnum;
-use Shared\Enums\InvoiceStatusEnum;
+use Phobiavr\PhoberLaravelCommon\Enums\InvoicePaymentMethodEnum;
+use Phobiavr\PhoberLaravelCommon\Enums\InvoiceStatusEnum;
 
 class InvoiceRequest extends FormRequest {
     /**

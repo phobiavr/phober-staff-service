@@ -14,13 +14,13 @@ use App\Models\Snack;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Route;
-use Shared\Clients\CrmClient;
-use Shared\Clients\DeviceClient;
-use Shared\Enums\InvoiceStatusEnum;
-use Shared\Enums\ScheduleEnum;
-use Shared\Enums\SessionStatusEnum;
-use Shared\Enums\SessionTariffEnum;
-use Shared\Enums\SessionTimeEnum;
+use Phobiavr\PhoberLaravelCommon\Clients\CrmClient;
+use Phobiavr\PhoberLaravelCommon\Clients\DeviceClient;
+use Phobiavr\PhoberLaravelCommon\Enums\InvoiceStatusEnum;
+use Phobiavr\PhoberLaravelCommon\Enums\ScheduleEnum;
+use Phobiavr\PhoberLaravelCommon\Enums\SessionStatusEnum;
+use Phobiavr\PhoberLaravelCommon\Enums\SessionTariffEnum;
+use Phobiavr\PhoberLaravelCommon\Enums\SessionTimeEnum;
 use Symfony\Component\HttpFoundation\Response as ResponseFoundation;
 
 Route::middleware('otp.generate')->group(function () {
