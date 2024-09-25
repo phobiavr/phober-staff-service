@@ -17,6 +17,7 @@
     "require": {
         "php": "^8.2",
         "laravel/framework": "^11.9",
+        "laravel/telescope": "^5.2",
         "phobiavr/phober-laravel-common": "^0.1.0"
     },
     "autoload": {
