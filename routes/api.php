@@ -71,6 +71,23 @@ Route::middleware('auth.server')->group(function () {
         return Response::json(status: ResponseFoundation::HTTP_NO_CONTENT);
     });
 
+    Route::get('/sessions/today', function () {
+        $sessions = Session::with(['servicedBy', 'invoice'])
+            ->whereDate('created_at', today())
+            ->orderByDesc('created_at')
+            ->get();
+
+        return Response::json(SessionResource::collection($sessions));
+    });
+
+    Route::get('/sessions', function () {
+        $sessions = Session::with(['servicedBy', 'invoice'])
+            ->whereIn('status', [SessionStatusEnum::ACTIVE->value, SessionStatusEnum::QUEUE->value])
+            ->get();
+
+        return Response::json(SessionResource::collection($sessions));
+    });
+
     Route::post('/sessions', function (SessionStoreRequest $request) {
         $now = new DateTime(now()->format('Y-m-d H:i:s'));
         $noon = new DateTime($now->format('Y-m-d') . ' 12:00:00');

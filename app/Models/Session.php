@@ -9,6 +9,8 @@ use Phobiavr\PhoberLaravelCommon\Traits\Authorable;
 class Session extends Model {
     use Authorable;
 
+    protected $table = 'game_sessions';
+
     protected $fillable = [
         "instance_id", "schedule_id", "serviced_by", "time", "tariff", "price", "status"
     ];

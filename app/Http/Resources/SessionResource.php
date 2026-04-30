@@ -20,7 +20,10 @@ class SessionResource extends JsonResource {
             "price"       => $this->price,
             "discount"    => $this->discount,
             "end_price"   => $this->end_price,
-            "status"      => $this->status,
+            "status"           => $this->status,
+            "created_at"       => $this->created_at,
+            "serviced_by_name" => $this->servicedBy?->full_name,
+            "customer"         => $this->invoice?->customer,
         ];
     }
 }
