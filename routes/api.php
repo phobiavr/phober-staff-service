@@ -14,6 +14,7 @@ use App\Models\Snack;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\URL;
 use Phobiavr\PhoberLaravelCommon\Clients\CrmClient;
 use Phobiavr\PhoberLaravelCommon\Clients\DeviceClient;
 use Phobiavr\PhoberLaravelCommon\Enums\InvoiceStatusEnum;
@@ -75,7 +76,15 @@ Route::middleware('auth.server')->group(function () {
         $sessions = Session::with(['servicedBy', 'invoice'])
             ->whereDate('created_at', today())
             ->orderByDesc('created_at')
-            ->get();
+            ->get()
+            ->each(function ($session) {
+                if (
+                    $session->status === SessionStatusEnum::ACTIVE->value &&
+                    now()->isAfter(\Carbon\Carbon::parse($session->created_at)->addMinutes((int) $session->time))
+                ) {
+                    $session->status = SessionStatusEnum::FINISHED->value;
+                }
+            });
 
         return Response::json(SessionResource::collection($sessions));
     });
@@ -83,6 +92,7 @@ Route::middleware('auth.server')->group(function () {
     Route::get('/sessions', function () {
         $sessions = Session::with(['servicedBy', 'invoice'])
             ->whereIn('status', [SessionStatusEnum::ACTIVE->value, SessionStatusEnum::QUEUE->value])
+            ->whereRaw('DATEADD(minute, [time], created_at) > GETDATE()')
             ->get();
 
         return Response::json(SessionResource::collection($sessions));
@@ -191,7 +201,10 @@ Route::middleware('auth.server')->group(function () {
     });
 
     Route::get('/sessions/{id}/discount/{discount}', function (int $id, float $discount) {
-        $session = Session::where('status', SessionStatusEnum::ACTIVE->value)->findOrFail($id);
+        $session = Session::whereIn('status', [
+            SessionStatusEnum::ACTIVE->value,
+            SessionStatusEnum::FINISHED->value,
+        ])->findOrFail($id);
 
         $session->discount = $discount;
         $session->save();
@@ -232,9 +245,31 @@ Route::middleware('auth.server')->group(function () {
             "price"    => $snack->price,
         ]);
 
-        return Response::json(status: ResponseFoundation::HTTP_NO_CONTENT);
+        return Response::json(['invoice_id' => $invoice->id], ResponseFoundation::HTTP_CREATED);
     });
 });
+
+// TV display — generates a signed URL valid for TTL_HOURS (requires staff auth)
+Route::middleware('auth.server')->post('/tv/token', function () {
+     $TTL_HOURS = 24;
+
+    $url = URL::temporarySignedRoute('tv.sessions', now()->addHours($TTL_HOURS));
+
+    return Response::json([
+        'url'        => $url,
+        'expires_at' => now()->addHours($TTL_HOURS)->toIso8601String(),
+    ]);
+});
+
+// TV display — validated by Laravel signed URL (APP_KEY), no staff login required
+Route::middleware('signed')->get('/tv/sessions', function () {
+    $sessions = Session::with(['servicedBy', 'invoice'])
+        ->whereIn('status', [SessionStatusEnum::ACTIVE->value, SessionStatusEnum::QUEUE->value])
+        ->whereRaw('DATEADD(minute, [time], created_at) > GETDATE()')
+        ->get();
+
+    return Response::json(SessionResource::collection($sessions));
+})->name('tv.sessions');
 
 Route::middleware('private')->group(function () {
     Route::get('/sessions/byScheduleId/{scheduleId}', function ($scheduleId) {

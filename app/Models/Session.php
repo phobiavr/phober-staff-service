@@ -24,6 +24,6 @@ class Session extends Model {
     }
 
     public function getEndPriceAttribute() {
-        return $this->price - ($this->discount * 0.1);
+        return round($this->price * (1 - ($this->discount ?? 0) * 0.1), 2);
     }
 }
