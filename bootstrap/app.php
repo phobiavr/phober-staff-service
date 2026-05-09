@@ -7,8 +7,13 @@ use Illuminate\Foundation\Configuration\Middleware;
 $app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         api: __DIR__ . '/../routes/api.php',
+        channels: __DIR__ . '/../routes/channels.php',
         health: '/up',
         apiPrefix: ''
+    )
+    ->withBroadcasting(
+        __DIR__ . '/../routes/channels.php',
+        ['middleware' => ['auth.server']],
     )
     ->withMiddleware(function (Middleware $middleware) {
         //

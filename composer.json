@@ -17,8 +17,11 @@
     "require": {
         "php": "^8.2",
         "laravel/framework": "^11.9",
+        "laravel/reverb": "^1.0",
         "laravel/telescope": "^5.2",
-        "phobiavr/phober-laravel-common": "^0.1.0"
+        "laravel/tinker": "^3.0",
+        "phobiavr/phober-laravel-common": "^0.1.0",
+        "predis/predis": "^3.4"
     },
     "autoload": {
         "psr-4": {

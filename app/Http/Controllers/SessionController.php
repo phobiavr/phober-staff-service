@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\SessionCreated;
 use App\Http\Requests\Session\StoreRequest;
 use App\Http\Resources\SessionResource;
 use App\Services\SessionService;
@@ -23,7 +24,11 @@ class SessionController extends BaseController {
     }
 
     public function store(StoreRequest $request): JsonResponse {
-        return Response::json(SessionResource::make($this->service->create($request)));
+        $session = $this->service->create($request);
+
+        SessionCreated::dispatch($session);
+
+        return Response::json(SessionResource::make($session));
     }
 
     public function cancel(int $id): JsonResponse {
