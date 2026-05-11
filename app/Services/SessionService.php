@@ -51,9 +51,9 @@ class SessionService {
 
         if ($request->isScheduled()) {
             $end = (clone $now)
-                ->add(new DateInterval('PT' . $time->getMins() . 'M'))
+                ->add(new DateInterval('PT' . $time->getMins() . 'M'));
                 //TODO:: make a config for updating, its' needed for reserve before session starts
-                ->add(new DateInterval('PT5M'));
+                //->add(new DateInterval('PT5M'));
 
             $schedule = DeviceClient::schedule(ScheduleEnum::IN_SESSION, $request->instanceId(), $now, $end);
 
