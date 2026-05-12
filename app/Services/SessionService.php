@@ -37,7 +37,7 @@ class SessionService {
     public function active(): Collection {
         return Session::with(['servicedBy', 'invoice'])
             ->whereIn('status', [SessionStatusEnum::ACTIVE->value, SessionStatusEnum::QUEUE->value])
-            ->whereRaw('DATEADD(minute, [time], created_at) > GETDATE()')
+            ->whereRaw('DATE_ADD(created_at, INTERVAL `time` MINUTE) > NOW()')
             ->get();
     }
 
