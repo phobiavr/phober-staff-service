@@ -22,6 +22,7 @@ class SessionResource extends JsonResource {
             "end_price"   => $this->end_price,
             "status"           => $this->status,
             "created_at"       => $this->created_at,
+            "started_at"       => $this->started_at,
             "serviced_by_name" => $this->servicedBy?->full_name,
             "customer"         => $this->invoice?->customer,
         ];

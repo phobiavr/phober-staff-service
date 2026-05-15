@@ -12,7 +12,7 @@ class Session extends Model {
     protected $table = 'game_sessions';
 
     protected $fillable = [
-        "instance_id", "schedule_id", "serviced_by", "time", "tariff", "price", "status"
+        "instance_id", "schedule_id", "serviced_by", "time", "tariff", "price", "status", "started_at"
     ];
 
     public function servicedBy(): BelongsTo {

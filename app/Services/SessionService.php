@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use DateInterval;
 use DateTime;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Response;
 use Phobiavr\PhoberLaravelCommon\Clients\DeviceClient;
@@ -27,7 +28,7 @@ class SessionService {
             ->each(function (Session $session) {
                 if (
                     $session->status === SessionStatusEnum::ACTIVE->value &&
-                    now()->isAfter(Carbon::parse($session->created_at)->addMinutes((int) $session->time))
+                    now()->isAfter(Carbon::parse($session->started_at ?? $session->created_at)->addMinutes($session->time))
                 ) {
                     $session->status = SessionStatusEnum::FINISHED->value;
                 }
@@ -36,25 +37,34 @@ class SessionService {
 
     public function active(): Collection {
         return Session::with(['servicedBy', 'invoice'])
-            ->whereIn('status', [SessionStatusEnum::ACTIVE->value, SessionStatusEnum::QUEUE->value])
-            ->whereRaw('DATE_ADD(created_at, INTERVAL `time` MINUTE) > NOW()')
+            ->where(function ($q) {
+                $q->where('status', SessionStatusEnum::QUEUE->value)
+                  ->orWhere(function ($q2) {
+                      $q2->where('status', SessionStatusEnum::ACTIVE->value)
+                         ->whereRaw('DATE_ADD(COALESCE(started_at, created_at), INTERVAL `time` MINUTE) > NOW()');
+                  });
+            })
             ->get();
     }
 
-    public function create(StoreRequest $request): Session {
+    public function activeOnly(): Collection {
+        return Session::with(['servicedBy', 'invoice'])
+            ->where('status', SessionStatusEnum::ACTIVE->value)
+            ->whereRaw('DATE_ADD(COALESCE(started_at, created_at), INTERVAL `time` MINUTE) > NOW()')
+            ->get();
+    }
+
+    public function create(StoreRequest $request): Session|Model {
         $now    = new DateTime(now()->format('Y-m-d H:i:s'));
         $noon   = new DateTime($now->format('Y-m-d') . ' 12:00:00');
         $tariff = $now > $noon ? SessionTariffEnum::EVENING : SessionTariffEnum::MORNING;
         $time   = $request->time();
 
         $scheduleId = null;
+        $startedAt = null;
 
         if ($request->isScheduled()) {
-            $end = (clone $now)
-                ->add(new DateInterval('PT' . $time->getMins() . 'M'));
-                //TODO:: make a config for updating, its' needed for reserve before session starts
-                //->add(new DateInterval('PT5M'));
-
+            $end = (clone $now)->add(new DateInterval('PT' . $time->getMins() . 'M'));
             $schedule = DeviceClient::schedule(ScheduleEnum::IN_SESSION, $request->instanceId(), $now, $end);
 
             if ($schedule->failed()) {
@@ -62,6 +72,7 @@ class SessionService {
             }
 
             $scheduleId = $schedule->json('id');
+            $startedAt  = $now;
         }
 
         $plan = DeviceClient::price($request->instanceId(), $tariff, $time);
@@ -83,6 +94,7 @@ class SessionService {
             'time'        => $time->getMins(),
             'price'       => $plan->json('price', 0),
             'status'      => $request->isScheduled() ? SessionStatusEnum::ACTIVE : SessionStatusEnum::QUEUE,
+            'started_at'  => $startedAt,
         ]);
     }
 
@@ -106,10 +118,7 @@ class SessionService {
         $session = Session::where('status', SessionStatusEnum::QUEUE->value)->findOrFail($id);
 
         $now = new DateTime(now()->format('Y-m-d H:i:s'));
-        $end = (clone $now)
-            ->add(new DateInterval('PT' . $session->time . 'M'))
-            ->add(new DateInterval('PT5M'));
-
+        $end = (clone $now)->add(new DateInterval('PT' . $session->time . 'M'));
         $schedule = DeviceClient::schedule(ScheduleEnum::IN_SESSION, $session->instance_id, $now, $end);
 
         if ($schedule->failed()) {
@@ -118,6 +127,7 @@ class SessionService {
 
         $session->status      = SessionStatusEnum::ACTIVE;
         $session->schedule_id = $schedule->json('id');
+        $session->started_at  = now();
         $session->save();
 
         return $session;

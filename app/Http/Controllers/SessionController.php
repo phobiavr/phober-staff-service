@@ -38,9 +38,9 @@ class SessionController extends BaseController {
     }
 
     public function start(int $id): JsonResponse {
-        $this->service->start($id);
+        $session = $this->service->start($id);
 
-        return Response::json(status: ResponseFoundation::HTTP_NO_CONTENT);
+        return Response::json(SessionResource::make($session->load(['servicedBy', 'invoice'])));
     }
 
     public function finish(int $id): JsonResponse {
