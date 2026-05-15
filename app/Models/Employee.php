@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Phobiavr\PhoberLaravelCommon\Enums\SessionStatusEnum;
 
 class Employee extends Model {
     protected $with = ['sessions'];
@@ -11,16 +12,23 @@ class Employee extends Model {
         return $this->hasMany(Session::class, 'serviced_by');
     }
 
+    private function activeSessions() {
+        return $this->sessions->whereIn('status', [
+            SessionStatusEnum::ACTIVE->value,
+            SessionStatusEnum::FINISHED->value,
+        ]);
+    }
+
     public function getServicedTotalAttribute() {
-        return $this->sessions->count();
+        return $this->activeSessions()->count();
     }
 
     public function getServicedMinutesTotalAttribute() {
-        return $this->sessions->sum('time');
+        return $this->activeSessions()->sum('time');
     }
 
     public function getServicedInADayAttribute() {
-        return $this->sessions
+        return $this->activeSessions()
             ->filter(function ($session) {
                 return $session->created_at->isToday();
             })
@@ -28,7 +36,7 @@ class Employee extends Model {
     }
 
     public function getServicedMinutesInADayAttribute() {
-        return $this->sessions
+        return $this->activeSessions()
             ->filter(function ($session) {
                 return $session->created_at->isToday();
             })
@@ -36,7 +44,7 @@ class Employee extends Model {
     }
 
     public function getServicedInAWeekAttribute() {
-        return $this->sessions
+        return $this->activeSessions()
             ->filter(function ($session) {
                 return $session->created_at->between(now()->startOfWeek(), now()->endOfWeek());
             })
@@ -44,7 +52,7 @@ class Employee extends Model {
     }
 
     public function getServicedMinutesInAWeekAttribute() {
-        return $this->sessions
+        return $this->activeSessions()
             ->filter(function ($session) {
                 return $session->created_at->between(now()->startOfWeek(), now()->endOfWeek());
             })
@@ -52,7 +60,7 @@ class Employee extends Model {
     }
 
     public function getServicedInAMonthAttribute() {
-        return $this->sessions
+        return $this->activeSessions()
             ->filter(function ($session) {
                 return $session->created_at->month == now()->month;
             })
@@ -60,7 +68,7 @@ class Employee extends Model {
     }
 
     public function getServicedMinutesInAMonthAttribute() {
-        return $this->sessions
+        return $this->activeSessions()
             ->filter(function ($session) {
                 return $session->created_at->month == now()->month;
             })
