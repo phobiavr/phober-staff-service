@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Models\Session;
+use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -24,9 +25,11 @@ class SessionCreated implements ShouldBroadcast
         $this->instanceId = (int) $session->instance_id;
     }
 
-    public function broadcastOn(): PrivateChannel
-    {
-        return new PrivateChannel('instances');
+    public function broadcastOn(): array {
+        return [
+            new Channel('instances'),
+            new PrivateChannel('instances')
+        ];
     }
 
     public function broadcastAs(): string

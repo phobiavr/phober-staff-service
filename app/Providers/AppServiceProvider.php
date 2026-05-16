@@ -2,12 +2,9 @@
 
 namespace App\Providers;
 
-use App\Events\SessionCreated;
-use App\Listeners\BroadcastSessionChanged;
 use App\Models\Session;
 use App\Models\SnackSale;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider {
@@ -31,6 +28,5 @@ class AppServiceProvider extends ServiceProvider {
             'staff-snack-sale' => SnackSale::class,
         ]);
 
-        Event::listen(SessionCreated::class, BroadcastSessionChanged::class);
     }
 }
