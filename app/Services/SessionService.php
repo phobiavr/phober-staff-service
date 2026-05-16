@@ -5,14 +5,13 @@ namespace App\Services;
 use App\Http\Requests\Session\StoreRequest;
 use App\Models\Session;
 use Carbon\Carbon;
-use DateInterval;
 use DateTime;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Response;
+use Phobiavr\PhoberLaravelCommon\Jobs\HandleSessionSchedule;
 use Phobiavr\PhoberLaravelCommon\Clients\DeviceClient;
-use Phobiavr\PhoberLaravelCommon\Enums\ScheduleEnum;
 use Phobiavr\PhoberLaravelCommon\Enums\SessionStatusEnum;
 use Phobiavr\PhoberLaravelCommon\Enums\SessionTariffEnum;
 
@@ -53,28 +52,7 @@ class SessionService {
         $tariff = $now > $noon ? SessionTariffEnum::EVENING : SessionTariffEnum::MORNING;
         $time   = $request->time();
 
-        $scheduleId = null;
-        $startedAt = null;
-
-        if ($request->isScheduled()) {
-            $end = (clone $now)->add(new DateInterval('PT' . $time->getMins() . 'M'));
-            $schedule = DeviceClient::schedule(ScheduleEnum::IN_SESSION, $request->instanceId(), $now, $end);
-
-            if ($schedule->failed()) {
-                throw new HttpResponseException(Response::json($schedule->json(), $schedule->status()));
-            }
-
-            $scheduleId = $schedule->json('id');
-            $startedAt  = $now;
-        } else {
-            $schedule = DeviceClient::schedule(ScheduleEnum::QUEUE, $request->instanceId(), $now);
-
-            if ($schedule->failed()) {
-                throw new HttpResponseException(Response::json($schedule->json(), $schedule->status()));
-            }
-
-            $scheduleId = $schedule->json('id');
-        }
+        $startedAt = $request->isScheduled() ? $now : null;
 
         $plan = DeviceClient::price($request->instanceId(), $tariff, $time);
 
@@ -88,15 +66,20 @@ class SessionService {
             $request->customer(),
         );
 
-        return $invoice->sessions()->create([
+        $session = $invoice->sessions()->create([
             'instance_id' => $request->instanceId(),
-            'schedule_id' => $scheduleId,
             'serviced_by' => $request->servicedBy(),
             'time'        => $time->getMins(),
             'price'       => $plan->json('price', 0),
             'status'      => $request->isScheduled() ? SessionStatusEnum::ACTIVE : SessionStatusEnum::QUEUE,
             'started_at'  => $startedAt,
         ]);
+
+        $action = $request->isScheduled() ? 'start' : 'queue';
+
+        HandleSessionSchedule::dispatch($request->instanceId(), $action, $time->getMins())->onQueue('device');
+
+        return $session;
     }
 
     public function cancel(int $id): Session {
@@ -105,12 +88,11 @@ class SessionService {
             SessionStatusEnum::ACTIVE->value,
         ])->findOrFail($id);
 
-        if ($session->schedule_id) {
-            DeviceClient::deleteSchedule($session->schedule_id);
-        }
-
         $session->status = SessionStatusEnum::CANCELED;
         $session->save();
+
+        HandleSessionSchedule::dispatch($session->instance_id, 'cancel')
+            ->onQueue('device');
 
         return $session;
     }
@@ -118,22 +100,12 @@ class SessionService {
     public function start(int $id): Session {
         $session = Session::where('status', SessionStatusEnum::QUEUE->value)->findOrFail($id);
 
-        if ($session->schedule_id) {
-            DeviceClient::deleteSchedule($session->schedule_id);
-        }
-
-        $now = new DateTime(now()->format('Y-m-d H:i:s'));
-        $end = (clone $now)->add(new DateInterval('PT' . $session->time . 'M'));
-        $schedule = DeviceClient::schedule(ScheduleEnum::IN_SESSION, $session->instance_id, $now, $end);
-
-        if ($schedule->failed()) {
-            throw new HttpResponseException(Response::json($schedule->json(), $schedule->status()));
-        }
-
-        $session->status      = SessionStatusEnum::ACTIVE;
-        $session->schedule_id = $schedule->json('id');
-        $session->started_at  = now();
+        $session->status     = SessionStatusEnum::ACTIVE;
+        $session->started_at = now();
         $session->save();
+
+        HandleSessionSchedule::dispatch($session->instance_id, 'start', $session->time)
+            ->onQueue('device');
 
         return $session;
     }
@@ -141,12 +113,11 @@ class SessionService {
     public function finish(int $id): Session {
         $session = Session::where('status', SessionStatusEnum::ACTIVE->value)->findOrFail($id);
 
-        if ($session->schedule_id) {
-            DeviceClient::deleteSchedule($session->schedule_id);
-        }
-
         $session->status = SessionStatusEnum::FINISHED;
         $session->save();
+
+        HandleSessionSchedule::dispatch($session->instance_id, 'finish')
+            ->onQueue('device');
 
         return $session;
     }
