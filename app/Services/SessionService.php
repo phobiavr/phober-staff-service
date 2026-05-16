@@ -37,20 +37,13 @@ class SessionService {
 
     public function active(): Collection {
         return Session::with(['servicedBy', 'invoice'])
-            ->where(function ($q) {
-                $q->where('status', SessionStatusEnum::QUEUE->value)
-                  ->orWhere(function ($q2) {
-                      $q2->where('status', SessionStatusEnum::ACTIVE->value)
-                         ->whereRaw('DATE_ADD(COALESCE(started_at, created_at), INTERVAL `time` MINUTE) > NOW()');
-                  });
-            })
+            ->whereIn('status', [SessionStatusEnum::ACTIVE->value, SessionStatusEnum::QUEUE->value])
             ->get();
     }
 
     public function forTV(): Collection {
         return Session::with(['servicedBy', 'invoice'])
             ->whereIn('status', [SessionStatusEnum::ACTIVE->value, SessionStatusEnum::QUEUE->value])
-            ->whereRaw('DATE_ADD(COALESCE(started_at, created_at), INTERVAL `time` MINUTE) > NOW()')
             ->get();
     }
 
