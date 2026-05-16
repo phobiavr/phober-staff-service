@@ -47,9 +47,9 @@ class SessionService {
             ->get();
     }
 
-    public function activeOnly(): Collection {
+    public function forTV(): Collection {
         return Session::with(['servicedBy', 'invoice'])
-            ->where('status', SessionStatusEnum::ACTIVE->value)
+            ->whereIn('status', [SessionStatusEnum::ACTIVE->value, SessionStatusEnum::QUEUE->value])
             ->whereRaw('DATE_ADD(COALESCE(started_at, created_at), INTERVAL `time` MINUTE) > NOW()')
             ->get();
     }

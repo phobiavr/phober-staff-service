@@ -26,6 +26,6 @@ class TvController extends BaseController {
     }
 
     public function sessions(): JsonResponse {
-        return Response::json(SessionResource::collection($this->service->activeOnly()));
+        return Response::json(SessionResource::collection($this->service->forTV()));
     }
 }
