@@ -66,6 +66,14 @@ class SessionService {
 
             $scheduleId = $schedule->json('id');
             $startedAt  = $now;
+        } else {
+            $schedule = DeviceClient::schedule(ScheduleEnum::QUEUE, $request->instanceId(), $now);
+
+            if ($schedule->failed()) {
+                throw new HttpResponseException(Response::json($schedule->json(), $schedule->status()));
+            }
+
+            $scheduleId = $schedule->json('id');
         }
 
         $plan = DeviceClient::price($request->instanceId(), $tariff, $time);
@@ -109,6 +117,10 @@ class SessionService {
 
     public function start(int $id): Session {
         $session = Session::where('status', SessionStatusEnum::QUEUE->value)->findOrFail($id);
+
+        if ($session->schedule_id) {
+            DeviceClient::deleteSchedule($session->schedule_id);
+        }
 
         $now = new DateTime(now()->format('Y-m-d H:i:s'));
         $end = (clone $now)->add(new DateInterval('PT' . $session->time . 'M'));
