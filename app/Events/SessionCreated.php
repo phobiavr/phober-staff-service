@@ -3,17 +3,12 @@
 namespace App\Events;
 
 use App\Models\Session;
-use Illuminate\Broadcasting\Channel;
-use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class SessionCreated implements ShouldBroadcast
+class SessionCreated
 {
     use Dispatchable;
-    use InteractsWithSockets;
     use SerializesModels;
 
     public int $sessionId;
@@ -23,25 +18,5 @@ class SessionCreated implements ShouldBroadcast
     {
         $this->sessionId  = (int) $session->id;
         $this->instanceId = (int) $session->instance_id;
-    }
-
-    public function broadcastOn(): array {
-        return [
-            new Channel('instances'),
-            new PrivateChannel('instances')
-        ];
-    }
-
-    public function broadcastAs(): string
-    {
-        return 'SessionCreated';
-    }
-
-    public function broadcastWith(): array
-    {
-        return [
-            'session_id'  => $this->sessionId,
-            'instance_id' => $this->instanceId,
-        ];
     }
 }
