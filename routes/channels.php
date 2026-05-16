@@ -9,3 +9,7 @@ Broadcast::channel('sessions.{userId}', function ($user, $userId) {
 Broadcast::channel('instances', function ($user) {
     return $user !== null;
 });
+
+Broadcast::channel('sessions', function ($user) {
+    return $user !== null;
+});

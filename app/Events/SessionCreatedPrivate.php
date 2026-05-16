@@ -19,9 +19,8 @@ class SessionCreatedPrivate implements ShouldBroadcast
         public readonly int $instanceId,
     ) {}
 
-    public function broadcastOn(): array
-    {
-        return [new PrivateChannel('instances')];
+    public function broadcastOn(): PrivateChannel {
+        return new PrivateChannel('sessions');
     }
 
     public function broadcastAs(): string

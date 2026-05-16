@@ -14,9 +14,8 @@ class SessionCreatedPublic implements ShouldBroadcast
     use InteractsWithSockets;
     use SerializesModels;
 
-    public function broadcastOn(): array
-    {
-        return [new Channel('instances')];
+    public function broadcastOn(): Channel {
+        return new Channel('sessions');
     }
 
     public function broadcastAs(): string
