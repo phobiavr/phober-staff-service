@@ -72,6 +72,34 @@ return [
             'after_commit' => false,
         ],
 
+        'rabbitmq' => [
+            'driver' => 'rabbitmq',
+            'queue' => env('RABBITMQ_QUEUE', 'default'),
+            'connection' => PhpAmqpLib\Connection\AMQPLazyConnection::class,
+            'hosts' => [
+                [
+                    'host' => env('RABBITMQ_HOST', 'rabbitmq'),
+                    'port' => env('RABBITMQ_PORT', 5672),
+                    'user' => env('RABBITMQ_USER', 'phober'),
+                    'password' => env('RABBITMQ_PASSWORD', 'secret'),
+                    'vhost' => env('RABBITMQ_VHOST', 'phober'),
+                ],
+            ],
+            'options' => [
+                'ssl_options' => [
+                    'cafile' => env('RABBITMQ_SSL_CAFILE'),
+                    'local_cert' => env('RABBITMQ_SSL_LOCALCERT'),
+                    'local_key' => env('RABBITMQ_SSL_LOCALKEY'),
+                    'verify_peer' => env('RABBITMQ_SSL_VERIFY_PEER', true),
+                    'passphrase' => env('RABBITMQ_SSL_PASSPHRASE'),
+                ],
+                'queue' => [
+                    'job' => VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Jobs\RabbitMQJob::class,
+                ],
+            ],
+            'worker' => env('RABBITMQ_WORKER', 'default'),
+        ],
+
     ],
 
     /*

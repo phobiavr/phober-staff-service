@@ -9,8 +9,8 @@ use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvi
 class EventServiceProvider extends ServiceProvider
 {
     protected $listen = [
-//        SessionCreated::class => [
-//            SessionCreatedListener::class,
-//        ],
+        SessionCreated::class => [
+            SessionCreatedListener::class,
+        ],
     ];
 }

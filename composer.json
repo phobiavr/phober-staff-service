@@ -21,7 +21,8 @@
         "laravel/telescope": "^5.2",
         "laravel/tinker": "^3.0",
         "phobiavr/phober-laravel-common": "^0.1.0",
-        "predis/predis": "^3.4"
+        "predis/predis": "^3.4",
+        "vladimir-yuldashev/laravel-queue-rabbitmq": "^14.5"
     },
     "autoload": {
         "psr-4": {
