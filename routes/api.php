@@ -35,7 +35,10 @@ Route::middleware('auth.server')->group(function () {
     Route::post('/tv/token', [TvController::class, 'token']);
 });
 
-// TV display — validated by Laravel signed URL (APP_KEY), no staff login required
+// TV PIN resolver (no auth required)
+Route::get('/tv/pin/{pin}', [TvController::class, 'resolvePin']);
+
+// TV sessions — validated by Laravel signed URL (APP_KEY), no staff login required
 Route::middleware('signed')->get('/tv/sessions', [TvController::class, 'sessions'])->name('tv.sessions');
 
 Route::middleware('private')->group(function () {
