@@ -77,7 +77,7 @@ class SessionService {
 
         $action = $request->isScheduled() ? 'start' : 'queue';
 
-        HandleSessionSchedule::dispatch($request->instanceId(), $action, $time->getMins())->onConnection('rabbitmq')->onQueue('device');
+        HandleSessionSchedule::dispatch($request->instanceId(), $action, $time->getMins())->onQueue('device');
 
         return $session;
     }
@@ -91,8 +91,7 @@ class SessionService {
         $session->status = SessionStatusEnum::CANCELED;
         $session->save();
 
-        HandleSessionSchedule::dispatch($session->instance_id, 'cancel')
-            ->onConnection('rabbitmq')->onQueue('device');
+        HandleSessionSchedule::dispatch($session->instance_id, 'cancel')->onQueue('device');
 
         return $session;
     }
@@ -104,8 +103,7 @@ class SessionService {
         $session->started_at = now();
         $session->save();
 
-        HandleSessionSchedule::dispatch($session->instance_id, 'start', $session->time)
-            ->onConnection('rabbitmq')->onQueue('device');
+        HandleSessionSchedule::dispatch($session->instance_id, 'start', $session->time)->onQueue('device');
 
         return $session;
     }
@@ -116,8 +114,7 @@ class SessionService {
         $session->status = SessionStatusEnum::FINISHED;
         $session->save();
 
-        HandleSessionSchedule::dispatch($session->instance_id, 'finish')
-            ->onConnection('rabbitmq')->onQueue('device');
+        HandleSessionSchedule::dispatch($session->instance_id, 'finish')->onQueue('device');
 
         return $session;
     }
