@@ -66,6 +66,7 @@ class SessionService {
             $request->customer(),
         );
 
+        /** @var Session $session */
         $session = $invoice->sessions()->create([
             'instance_id' => $request->instanceId(),
             'serviced_by' => $request->servicedBy(),
@@ -77,7 +78,7 @@ class SessionService {
 
         $action = $request->isScheduled() ? 'start' : 'queue';
 
-        HandleSessionSchedule::dispatch($request->instanceId(), $action, $time->getMins())->onQueue('device');
+        HandleSessionSchedule::dispatch($request->instanceId(), $action, $time->getMins(), $session->id)->onQueue('device');
 
         return $session;
     }
@@ -129,9 +130,5 @@ class SessionService {
         $session->save();
 
         return $session;
-    }
-
-    public function findByScheduleId(int|string $scheduleId): Session {
-        return Session::where('schedule_id', $scheduleId)->firstOrFail();
     }
 }

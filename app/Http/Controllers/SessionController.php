@@ -54,14 +54,4 @@ class SessionController extends BaseController {
 
         return Response::json(status: ResponseFoundation::HTTP_NO_CONTENT);
     }
-
-    public function byScheduleId(int|string $scheduleId): JsonResponse {
-        $session = $this->service->findByScheduleId($scheduleId);
-
-        return Response::json([
-            'serviced_by' => $session->servicedBy->full_name,
-            'time'        => $session->time,
-            'customer'    => $session->invoice->customer,
-        ]);
-    }
 }
