@@ -40,3 +40,7 @@ Route::get('/tv/pin/{pin}', [TvController::class, 'resolvePin']);
 
 // TV sessions — validated by Laravel signed URL (APP_KEY), no staff login required
 Route::middleware('signed')->get('/tv/sessions', [TvController::class, 'sessions'])->name('tv.sessions');
+
+Route::middleware('private')->group(function () {
+    Route::get('/sessions/{session}', [SessionController::class, 'show']);
+});

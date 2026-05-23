@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\SessionCreated;
 use App\Http\Requests\Session\StoreRequest;
 use App\Http\Resources\SessionResource;
+use App\Models\Session;
 use App\Services\SessionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller as BaseController;
@@ -21,6 +22,10 @@ class SessionController extends BaseController {
 
     public function active(): JsonResponse {
         return Response::json(SessionResource::collection($this->service->active()));
+    }
+
+    public function show(Session $session): JsonResponse {
+        return Response::json(SessionResource::make($session));
     }
 
     public function store(StoreRequest $request): JsonResponse {
