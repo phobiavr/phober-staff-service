@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Events;
+namespace App\Events\Broadcast;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
@@ -19,7 +19,8 @@ class SessionCreatedPrivate implements ShouldBroadcast
         public readonly int $instanceId,
     ) {}
 
-    public function broadcastOn(): PrivateChannel {
+    public function broadcastOn(): PrivateChannel
+    {
         return new PrivateChannel('sessions');
     }
 

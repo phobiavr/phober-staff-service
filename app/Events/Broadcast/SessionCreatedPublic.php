@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Events;
+namespace App\Events\Broadcast;
 
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
@@ -14,7 +14,8 @@ class SessionCreatedPublic implements ShouldBroadcast
     use InteractsWithSockets;
     use SerializesModels;
 
-    public function broadcastOn(): Channel {
+    public function broadcastOn(): Channel
+    {
         return new Channel('sessions');
     }
 

@@ -2,9 +2,9 @@
 
 namespace App\Listeners;
 
+use App\Events\Broadcast\SessionCreatedPrivate;
+use App\Events\Broadcast\SessionCreatedPublic;
 use App\Events\SessionCreated;
-use App\Events\SessionCreatedPrivate;
-use App\Events\SessionCreatedPublic;
 
 class SessionCreatedListener
 {
