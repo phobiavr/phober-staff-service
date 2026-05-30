@@ -78,7 +78,8 @@ class SessionService {
 
         $action = $request->isScheduled() ? 'start' : 'queue';
 
-        HandleSessionSchedule::dispatch($request->instanceId(), $action, $time->getMins(), $session->id)->onQueue('device');
+        HandleSessionSchedule::dispatch($request->instanceId(), $action, $time->getMins(), $session->id, $session->created_at->toIso8601String())
+            ->onQueue('device');
 
         return $session;
     }
