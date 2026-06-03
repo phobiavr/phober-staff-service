@@ -3,6 +3,7 @@
 namespace App\Listeners;
 
 use App\Events\SessionCanceled;
+use App\Events\SessionCreated;
 use App\Events\SessionFinished;
 use App\Events\SessionStarted;
 use Illuminate\Events\Dispatcher;
@@ -27,8 +28,10 @@ class SessionScheduleSubscriber
 
     public function subscribe(Dispatcher $events): void
     {
-        $events->listen(SessionCanceled::class, [self::class, 'handleCanceled']);
+        $events->listen(SessionCreated::class, SessionCreatedListener::class);
+
         $events->listen(SessionStarted::class, [self::class, 'handleStarted']);
+        $events->listen(SessionFinished::class, [self::class, 'handleFinished']);
         $events->listen(SessionFinished::class, [self::class, 'handleFinished']);
     }
 }
