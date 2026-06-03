@@ -31,8 +31,6 @@ class SessionController extends BaseController {
     public function store(StoreRequest $request): JsonResponse {
         $session = $this->service->create($request);
 
-        SessionCreated::dispatch($session);
-
         return Response::json(SessionResource::make($session));
     }
 

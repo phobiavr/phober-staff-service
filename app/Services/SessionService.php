@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Events\SessionCanceled;
+use App\Events\SessionCreated;
 use App\Events\SessionFinished;
 use App\Events\SessionStarted;
 use App\Http\Requests\Session\StoreRequest;
@@ -79,10 +80,7 @@ class SessionService {
             'started_at'  => $startedAt,
         ]);
 
-        $action = $request->isScheduled() ? 'start' : 'queue';
-
-        HandleSessionSchedule::dispatch($request->instanceId(), $action, $time->getMins(), $session->id, $session->created_at->toIso8601String())
-            ->onQueue('device'); // create имеет доп. параметры — оставляем прямой диспатч
+        event(new SessionCreated($session, $request->isScheduled() ? 'start' : 'queue', $time->getMins()));
 
         return $session;
     }
