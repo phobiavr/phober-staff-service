@@ -80,7 +80,7 @@ class SessionService {
             'started_at'  => $startedAt,
         ]);
 
-        event(new SessionCreated($session, $request->isScheduled() ? 'start' : 'queue', $time->getMins()));
+        event(new SessionCreated($session, $request->isScheduled() ? 'start' : 'queue'));
 
         return $session;
     }
