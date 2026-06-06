@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Invoice\IndexRequest;
 use App\Http\Requests\Invoice\PayRequest;
 use App\Http\Resources\InvoiceResource;
 use App\Services\InvoiceService;
@@ -14,8 +15,10 @@ class InvoiceController extends BaseController {
     public function __construct(private readonly InvoiceService $service) {
     }
 
-    public function index(): JsonResponse {
-        return Response::json(InvoiceResource::collection($this->service->all()));
+    public function index(IndexRequest $request): JsonResponse {
+        return Response::json(InvoiceResource::collection(
+            $this->service->all($request->status(), $request->period())
+        ));
     }
 
     public function pay(PayRequest $request, int $id): JsonResponse {

@@ -2,14 +2,25 @@
 
 namespace App\Services;
 
+use App\Enums\PeriodFilterEnum;
 use App\Models\Invoice;
 use Illuminate\Database\Eloquent\Collection;
 use Phobiavr\PhoberLaravelCommon\Clients\CrmClient;
 use Phobiavr\PhoberLaravelCommon\Enums\InvoiceStatusEnum;
 
 class InvoiceService {
-    public function all(): Collection {
-        return Invoice::all();
+    public function all(?InvoiceStatusEnum $status = null, ?PeriodFilterEnum $period = null): Collection {
+        $query = Invoice::query();
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        if ($period) {
+            $query->where('created_at', '>=', $period->startOf());
+        }
+
+        return $query->get();
     }
 
     public function pay(int $id, array $paymentMethod): Invoice {
