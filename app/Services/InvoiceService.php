@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use Illuminate\Database\Eloquent\Collection;
 use Phobiavr\PhoberLaravelCommon\Clients\CrmClient;
 use Phobiavr\PhoberLaravelCommon\Enums\InvoiceStatusEnum;
+use Phobiavr\PhoberLaravelCommon\Enums\SessionStatusEnum;
 
 class InvoiceService {
     public function all(?InvoiceStatusEnum $status = null, ?PeriodFilterEnum $period = null): Collection {
@@ -20,7 +21,7 @@ class InvoiceService {
             $query->where('created_at', '>=', $period->startOf());
         }
 
-        return $query->get();
+        return $query->with(['sessions' => fn($q) => $q->where('status', '!=', SessionStatusEnum::CANCELED->value)])->get();
     }
 
     public function pay(int $id, array $paymentMethod): Invoice {
