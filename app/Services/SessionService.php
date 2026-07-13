@@ -16,6 +16,7 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Response;
 use Phobiavr\PhoberLaravelCommon\Jobs\HandleSessionSchedule;
 use Phobiavr\PhoberLaravelCommon\Clients\DeviceClient;
+use Phobiavr\PhoberLaravelCommon\Data\PricePayload;
 use Phobiavr\PhoberLaravelCommon\Enums\SessionStatusEnum;
 use Phobiavr\PhoberLaravelCommon\Enums\SessionTariffEnum;
 
@@ -58,7 +59,7 @@ class SessionService {
 
         $startedAt = $request->isScheduled() ? $now : null;
 
-        $plan = DeviceClient::price($request->instanceId(), $tariff, $time);
+        $plan = DeviceClient::price(PricePayload::forInstance($request->instanceId(), $tariff, $time));
 
         if ($plan->failed()) {
             throw new HttpResponseException(Response::json($plan->json(), $plan->status()));

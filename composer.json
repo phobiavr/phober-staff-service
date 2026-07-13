@@ -10,6 +10,10 @@
         "laravel/reverb": "^1.0",
         "laravel/telescope": "^5.2",
         "laravel/tinker": "^3.0",
+        "open-telemetry/api": "^1.9",
+        "open-telemetry/exporter-zipkin": "^1.2",
+        "open-telemetry/sdk": "^1.14",
+        "php-http/guzzle7-adapter": "^1.1",
         "predis/predis": "^3.4",
         "sentry/sentry-laravel": "^4.25",
         "vladimir-yuldashev/laravel-queue-rabbitmq": "^14.5"
