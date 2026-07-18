@@ -14,9 +14,9 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Response;
-use Phobiavr\PhoberLaravelCommon\Jobs\HandleSessionSchedule;
 use Phobiavr\PhoberLaravelCommon\Clients\DeviceClient;
 use Phobiavr\PhoberLaravelCommon\Data\PricePayload;
+use Phobiavr\PhoberLaravelCommon\Enums\SessionScheduleActionEnum;
 use Phobiavr\PhoberLaravelCommon\Enums\SessionStatusEnum;
 use Phobiavr\PhoberLaravelCommon\Enums\SessionTariffEnum;
 
@@ -81,7 +81,7 @@ class SessionService {
             'started_at'  => $startedAt,
         ]);
 
-        event(new SessionCreated($session, $request->isScheduled() ? 'start' : 'queue'));
+        event(new SessionCreated($session, $request->isScheduled() ? SessionScheduleActionEnum::START : SessionScheduleActionEnum::QUEUE));
 
         return $session;
     }
