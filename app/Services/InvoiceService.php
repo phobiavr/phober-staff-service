@@ -5,9 +5,11 @@ namespace App\Services;
 use App\Enums\PeriodFilterEnum;
 use App\Models\Invoice;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Log;
 use Phobiavr\PhoberLaravelCommon\Clients\CrmClient;
 use Phobiavr\PhoberLaravelCommon\Enums\InvoiceStatusEnum;
 use Phobiavr\PhoberLaravelCommon\Enums\SessionStatusEnum;
+use Phobiavr\PhoberLaravelCommon\Exceptions\ServiceUnavailableException;
 
 class InvoiceService {
     public function all(?InvoiceStatusEnum $status = null, ?PeriodFilterEnum $period = null): Collection {
@@ -60,10 +62,17 @@ class InvoiceService {
         $customerName = $fallbackCustomer;
 
         if ($customerId) {
-            $response = CrmClient::customer($customerId);
+            try {
+                $response = CrmClient::customer($customerId);
 
-            if (!$response->failed()) {
-                $customerName = $response->json('full_name');
+                if (!$response->failed()) {
+                    $customerName = $response->json('full_name');
+                }
+            } catch (ServiceUnavailableException $e) {
+                Log::error('Failed to resolve customer name: crm-service unreachable', [
+                    'customer_id' => $customerId,
+                    'message'     => $e->getMessage(),
+                ]);
             }
         }
 

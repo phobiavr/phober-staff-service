@@ -13,12 +13,15 @@ use DateTime;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Response;
 use Phobiavr\PhoberLaravelCommon\Clients\DeviceClient;
 use Phobiavr\PhoberLaravelCommon\Data\PricePayload;
 use Phobiavr\PhoberLaravelCommon\Enums\SessionScheduleActionEnum;
 use Phobiavr\PhoberLaravelCommon\Enums\SessionStatusEnum;
 use Phobiavr\PhoberLaravelCommon\Enums\SessionTariffEnum;
+use Phobiavr\PhoberLaravelCommon\Exceptions\ServiceUnavailableException;
+use Symfony\Component\HttpFoundation\Response as ResponseFoundation;
 
 class SessionService {
     public function __construct(private readonly InvoiceService $invoices) {
@@ -59,7 +62,18 @@ class SessionService {
 
         $startedAt = $request->isScheduled() ? $now : null;
 
-        $plan = DeviceClient::price(PricePayload::forInstance($request->instanceId(), $tariff, $time));
+        try {
+            $plan = DeviceClient::price(PricePayload::forInstance($request->instanceId(), $tariff, $time));
+        } catch (ServiceUnavailableException $e) {
+            Log::error('Failed to price session: device-service unreachable', [
+                'instance_id' => $request->instanceId(),
+                'message'     => $e->getMessage(),
+            ]);
+
+            throw new HttpResponseException(Response::json([
+                'message' => 'Сервис устройств временно недоступен, попробуйте создать сессию позже.',
+            ], ResponseFoundation::HTTP_SERVICE_UNAVAILABLE));
+        }
 
         if ($plan->failed()) {
             throw new HttpResponseException(Response::json($plan->json(), $plan->status()));
