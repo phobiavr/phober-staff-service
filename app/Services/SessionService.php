@@ -71,7 +71,7 @@ class SessionService {
             ]);
 
             throw new HttpResponseException(Response::json([
-                'message' => 'Сервис устройств временно недоступен, попробуйте создать сессию позже.',
+                'message' => 'Device service is temporarily unavailable, please try creating the session again later.',
             ], ResponseFoundation::HTTP_SERVICE_UNAVAILABLE));
         }
 
