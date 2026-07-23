@@ -20,7 +20,7 @@ Route::middleware('auth.server')->group(function () {
 
     Route::get('/sessions/today', [SessionController::class, 'today']);
     Route::get('/sessions', [SessionController::class, 'active']);
-    Route::post('/sessions', [SessionController::class, 'store']);
+    Route::post('/sessions', [SessionController::class, 'store'])->middleware('idempotent');
     Route::delete('/sessions/{id}', [SessionController::class, 'cancel']);
     Route::put('/sessions/{id}/start', [SessionController::class, 'start']);
     Route::put('/sessions/{id}/finish', [SessionController::class, 'finish']);
