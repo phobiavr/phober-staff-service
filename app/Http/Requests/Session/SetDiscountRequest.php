@@ -3,8 +3,16 @@
 namespace App\Http\Requests\Session;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Phobiavr\PhoberLaravelCommon\Contracts\AuthUserInterface;
 
 class SetDiscountRequest extends FormRequest {
+    public function authorize(): bool {
+        /** @var AuthUserInterface|null $user */
+        $user = $this->user();
+
+        return $user?->hasPermission('manage_discount') ?? false;
+    }
+
     public function rules(): array {
         return [
             'discount' => ['required', 'numeric', 'min:0', 'max:100'],
