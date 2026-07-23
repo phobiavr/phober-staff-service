@@ -27,7 +27,7 @@ Route::middleware('auth.server')->group(function () {
     Route::delete('/sessions/{id}', [SessionController::class, 'cancel']);
     Route::put('/sessions/{id}/start', [SessionController::class, 'start']);
     Route::put('/sessions/{id}/finish', [SessionController::class, 'finish']);
-    Route::get('/sessions/{id}/discount/{discount}', [SessionController::class, 'setDiscount']);
+    Route::put('/sessions/{id}/discount', [SessionController::class, 'setDiscount']);
 
     Route::get('/snacks', [SnackController::class, 'index']);
     Route::post('/snacks', [SnackController::class, 'deal']);

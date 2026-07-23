@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\SessionCreated;
+use App\Http\Requests\Session\SetDiscountRequest;
 use App\Http\Requests\Session\StoreRequest;
 use App\Http\Resources\SessionResource;
 use App\Models\Session;
@@ -52,8 +52,8 @@ class SessionController extends BaseController {
         return Response::json(status: ResponseFoundation::HTTP_NO_CONTENT);
     }
 
-    public function setDiscount(int $id, float $discount): JsonResponse {
-        $this->service->setDiscount($id, $discount);
+    public function setDiscount(SetDiscountRequest $request, int $id): JsonResponse {
+        $this->service->setDiscount($id, $request->discount());
 
         return Response::json(status: ResponseFoundation::HTTP_NO_CONTENT);
     }
