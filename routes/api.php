@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\InvoiceController;
-use App\Http\Controllers\MeController;
 use App\Http\Controllers\OtpController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\SnackController;
@@ -13,8 +12,6 @@ Route::middleware('otp.generate')->get('/otp/make', [OtpController::class, 'make
 Route::middleware('otp')->get('/otp/submit', [OtpController::class, 'submit']);
 
 Route::middleware('auth.server')->group(function () {
-    Route::get('', [MeController::class, 'show']);
-
     Route::get('/employees', [EmployeeController::class, 'index']);
 
     Route::get('/invoices', [InvoiceController::class, 'index']);
