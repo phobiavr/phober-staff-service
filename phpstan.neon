@@ -1,0 +1,15 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 8
+
+    paths:
+        - app
+        - config
+        - routes
+        - shared/laravel-common/src
+
+    tmpDir: build/phpstan
+
+    treatPhpDocTypesAsCertain: false

@@ -1,0 +1,45 @@
+name: PHPStan
+
+on:
+    push:
+        branches: [ master ]
+    pull_request:
+        branches: [ master ]
+    workflow_dispatch:
+
+jobs:
+    phpstan:
+        runs-on: ubuntu-latest
+        name: Static analysis
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Checkout shared laravel-common package
+              uses: actions/checkout@v4
+              with:
+                  repository: phobiavr/phober-laravel-common
+                  ref: master
+                  ssh-key: ${{ secrets.LARAVEL_COMMON_DEPLOY_KEY }}
+                  path: shared/laravel-common
+
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: 8.2
+                  extensions: mbstring, bcmath, pdo, pdo_mysql
+                  tools: composer:v2
+                  coverage: none
+
+            - name: Cache Composer
+              uses: actions/cache@v4
+              with:
+                  path: vendor
+                  key: ${{ runner.os }}-composer-${{ hashFiles('composer.lock') }}
+                  restore-keys: ${{ runner.os }}-composer-
+
+            - name: Install PHP dependencies
+              run: composer install --prefer-dist --no-interaction --no-progress
+
+            - name: Run PHPStan
+              run: vendor/bin/phpstan analyse --memory-limit=1G --error-format=github
