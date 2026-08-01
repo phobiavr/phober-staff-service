@@ -19,12 +19,21 @@
         "vladimir-yuldashev/laravel-queue-rabbitmq": "^14.5"
     },
     "require-dev": {
-        "larastan/larastan": "^3.10"
+        "fakerphp/faker": "^1.24",
+        "larastan/larastan": "^3.10",
+        "mockery/mockery": "^1.6",
+        "phpunit/phpunit": "^11.5"
     },
     "autoload": {
         "psr-4": {
             "App\\": "app/",
             "Phobiavr\\PhoberLaravelCommon\\": "shared/laravel-common/src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/",
+            "Database\\Factories\\": "database/factories/"
         }
     },
     "scripts": {
@@ -39,7 +48,8 @@
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
         ],
         "analyse": "phpstan analyse --memory-limit=1G",
-        "analyze": "@analyse"
+        "analyze": "@analyse",
+        "test": "@php artisan test"
     },
     "extra": {
         "laravel": {
@@ -51,7 +61,6 @@
         "preferred-install": "dist",
         "sort-packages": true,
         "allow-plugins": {
-            "pestphp/pest-plugin": true,
             "php-http/discovery": true
         }
     },

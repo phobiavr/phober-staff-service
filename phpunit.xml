@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+    </source>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_KEY" value="base64:cGhvYmVyLXRlc3QtYXBwLWtleS0zMi1ieXRlcyEhISE="/>
+        <env name="APP_DEBUG" value="true"/>
+        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="CACHE_STORE" value="array"/>
+        <env name="DB_CONNECTION" value="mysql"/>
+        <env name="DB_HOST" value="db_mysql"/>
+        <env name="DB_PORT" value="3306"/>
+        <env name="DB_DATABASE" value="phober_staff"/>
+        <env name="DB_USERNAME" value="root"/>
+        <env name="DB_PASSWORD" value="root"/>
+        <env name="DB_SHARED_CONNECTION" value="mysql"/>
+        <env name="DB_SHARED_HOST" value="db_mysql"/>
+        <env name="DB_SHARED_PORT" value="3306"/>
+        <env name="DB_SHARED_DATABASE" value="phober_shared"/>
+        <env name="DB_SHARED_USERNAME" value="root"/>
+        <env name="DB_SHARED_PASSWORD" value="root"/>
+        <env name="MAIL_MAILER" value="array"/>
+        <env name="BROADCAST_CONNECTION" value="log"/>
+        <env name="QUEUE_CONNECTION" value="database"/>
+        <env name="DB_QUEUE" value="staff"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="SERVICE_SECRET" value="test-service-secret"/>
+        <env name="OTEL_SDK_DISABLED" value="true"/>
+        <env name="OTEL_PHP_AUTOLOAD_ENABLED" value="false"/>
+    </php>
+</phpunit>

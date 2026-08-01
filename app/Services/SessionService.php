@@ -91,7 +91,7 @@ class SessionService {
             'serviced_by' => $request->servicedBy(),
             'time'        => $time->getMins(),
             'price'       => $plan->json('price', 0),
-            'status'      => $request->isScheduled() ? SessionStatusEnum::ACTIVE : SessionStatusEnum::QUEUE,
+            'status'      => $request->isScheduled() ? SessionStatusEnum::ACTIVE->value : SessionStatusEnum::QUEUE->value,
             'started_at'  => $startedAt,
         ]);
 
@@ -106,7 +106,7 @@ class SessionService {
             SessionStatusEnum::ACTIVE->value,
         ])->findOrFail($id);
 
-        $session->status = SessionStatusEnum::CANCELED;
+        $session->status = SessionStatusEnum::CANCELED->value;
         $session->save();
 
         event(new SessionCanceled($session));
@@ -117,7 +117,7 @@ class SessionService {
     public function start(int $id): Session {
         $session = Session::where('status', SessionStatusEnum::QUEUE->value)->findOrFail($id);
 
-        $session->status     = SessionStatusEnum::ACTIVE;
+        $session->status     = SessionStatusEnum::ACTIVE->value;
         $session->started_at = now();
         $session->save();
 
@@ -129,7 +129,7 @@ class SessionService {
     public function finish(int $id): Session {
         $session = Session::where('status', SessionStatusEnum::ACTIVE->value)->findOrFail($id);
 
-        $session->status = SessionStatusEnum::FINISHED;
+        $session->status = SessionStatusEnum::FINISHED->value;
         $session->save();
 
         event(new SessionFinished($session));

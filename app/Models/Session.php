@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Phobiavr\PhoberLaravelCommon\Traits\Authorable;
 
 class Session extends Model {
     use Authorable;
+    use HasFactory;
 
     protected $table = 'game_sessions';
 

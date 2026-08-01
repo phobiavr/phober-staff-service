@@ -1,0 +1,111 @@
+<?php
+
+namespace Tests\Unit\Services;
+
+use App\Enums\PeriodFilterEnum;
+use App\Models\Invoice;
+use App\Models\Session;
+use App\Services\InvoiceService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Http;
+use App\Models\SnackSale;
+use Phobiavr\PhoberLaravelCommon\Enums\InvoiceStatusEnum;
+use Phobiavr\PhoberLaravelCommon\Testing\ClearsExistingRows;
+use PHPUnit\Framework\Attributes\Group;
+use Tests\TestCase;
+
+class InvoiceServiceTest extends TestCase
+{
+    use ClearsExistingRows;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->clearExistingRows(Session::class, SnackSale::class, Invoice::class);
+    }
+
+    public function test_lists_invoices_filtered_by_status_and_period_excluding_canceled_sessions_from_the_eager_load(): void
+    {
+        $matching = Invoice::factory()->create(['status' => InvoiceStatusEnum::QUEUE->value, 'created_at' => now()]);
+        Session::factory()->for($matching)->canceled()->create();
+        Session::factory()->for($matching)->finished()->create();
+
+        Invoice::factory()->create(['status' => InvoiceStatusEnum::PAYED->value, 'created_at' => now()]);
+        Invoice::factory()->create(['status' => InvoiceStatusEnum::QUEUE->value, 'created_at' => now()->subMonths(2)]);
+
+        $result = app(InvoiceService::class)->all(InvoiceStatusEnum::QUEUE, PeriodFilterEnum::MONTH);
+
+        $this->assertCount(1, $result);
+        $this->assertSame($matching->id, $result->first()->id);
+        $this->assertCount(1, $result->first()->sessions);
+    }
+
+    public function test_pays_a_queued_invoice_and_records_the_payment_method(): void
+    {
+        $invoice = Invoice::factory()->create(['status' => InvoiceStatusEnum::QUEUE->value]);
+
+        $paid = app(InvoiceService::class)->pay($invoice->id, ['CASH' => 50]);
+
+        $this->assertSame(InvoiceStatusEnum::PAYED->value, $paid->fresh()->status);
+        $this->assertSame(['CASH' => 50], $paid->fresh()->payment_method);
+    }
+
+    public function test_refuses_to_pay_an_invoice_that_is_not_queued(): void
+    {
+        $invoice = Invoice::factory()->create(['status' => InvoiceStatusEnum::PAYED->value]);
+
+        $this->expectException(ModelNotFoundException::class);
+        app(InvoiceService::class)->pay($invoice->id, ['CASH' => 10]);
+    }
+
+    public function test_cancels_a_queued_invoice(): void
+    {
+        $invoice = Invoice::factory()->create(['status' => InvoiceStatusEnum::QUEUE->value]);
+
+        $canceled = app(InvoiceService::class)->cancel($invoice->id);
+
+        $this->assertSame(InvoiceStatusEnum::CANCELED->value, $canceled->fresh()->status);
+    }
+
+    public function test_reuses_an_existing_queued_invoice_by_id_ignoring_the_customer_arguments(): void
+    {
+        $existing = Invoice::factory()->create(['status' => InvoiceStatusEnum::QUEUE->value, 'customer' => 'Original']);
+
+        $result = app(InvoiceService::class)->findOrCreateQueued($existing->id, 999, 'Ignored');
+
+        $this->assertSame($existing->id, $result->id);
+        $this->assertSame('Original', $result->customer);
+    }
+
+    public function test_does_not_reuse_an_invoice_id_that_is_not_queued_and_creates_a_new_invoice_instead(): void
+    {
+        $paid = Invoice::factory()->create(['status' => InvoiceStatusEnum::PAYED->value]);
+
+        $result = app(InvoiceService::class)->findOrCreateQueued($paid->id, null, 'Quest');
+
+        $this->assertNotSame($paid->id, $result->id);
+        $this->assertSame('Quest', $result->customer);
+    }
+
+    public function test_resolves_the_customer_full_name_from_crm_service_when_a_customer_id_is_given(): void
+    {
+        Http::fake(['http://crm-service/customers/*' => Http::response(['full_name' => 'Jane Doe'])]);
+
+        $result = app(InvoiceService::class)->findOrCreateQueued(null, 55, 'Quest');
+
+        $this->assertSame('Jane Doe', $result->customer);
+        $this->assertSame(55, $result->customer_id);
+    }
+
+    #[Group('slow')]
+    public function test_falls_back_to_the_given_customer_name_when_crm_service_is_unreachable(): void
+    {
+        Http::fake(['http://crm-service/*' => fn () => throw new ConnectionException('refused')]);
+
+        $result = app(InvoiceService::class)->findOrCreateQueued(null, 55, 'Quest');
+
+        $this->assertSame('Quest', $result->customer);
+    }
+}

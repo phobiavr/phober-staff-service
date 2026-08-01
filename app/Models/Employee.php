@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Phobiavr\PhoberLaravelCommon\Enums\SessionStatusEnum;
 
 class Employee extends Model {
+    use HasFactory;
+
     public function sessions() {
         return $this->hasMany(Session::class, 'serviced_by');
     }
