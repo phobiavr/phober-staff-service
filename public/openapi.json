@@ -1,0 +1,434 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Phober Staff Service API",
+    "description": "Sessions, employees, invoices, snacks, TV pin display. Reached externally via https://api.phober.test/staff/*.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "https://api.phober.test/staff", "description": "Via API gateway" }
+  ],
+  "tags": [
+    { "name": "Sessions" },
+    { "name": "Invoices" },
+    { "name": "Employees" },
+    { "name": "Snacks" },
+    { "name": "TV" },
+    { "name": "OTP" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "authServer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Bearer token validated against auth-server (auth.server middleware). staff-service does not check the token itself — it forwards it to auth-server for validation on every request."
+      },
+      "privateService": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Service-Secret",
+        "description": "Shared inter-service secret (private middleware) — for service-to-service calls, not external clients."
+      }
+    },
+    "schemas": {
+      "Session": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "instance_id": { "type": "integer" },
+          "serviced_by": { "type": "integer", "description": "Employee id" },
+          "time": { "type": "integer", "description": "minutes" },
+          "price": { "type": "number", "format": "float" },
+          "discount": { "type": "number", "format": "float", "nullable": true, "description": "0-100" },
+          "end_price": { "type": "number", "format": "float", "description": "price * (1 - discount / 100)" },
+          "status": { "type": "string", "enum": ["QUEUE", "ACTIVE", "CANCELED", "FINISHED"] },
+          "created_at": { "type": "string", "format": "date-time" },
+          "started_at": { "type": "string", "format": "date-time", "nullable": true },
+          "serviced_by_name": { "type": "string", "nullable": true },
+          "customer": { "type": "string", "nullable": true }
+        }
+      },
+      "Invoice": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "customer_id": { "type": "integer", "nullable": true },
+          "customer": { "type": "string", "nullable": true },
+          "status": { "type": "string", "enum": ["QUEUE", "PAYED", "CANCELED"] },
+          "sessions": { "type": "array", "items": { "$ref": "#/components/schemas/Session" } },
+          "snack_sales": { "type": "array", "items": { "$ref": "#/components/schemas/SnackSale" } },
+          "payment_method": { "type": "object", "nullable": true, "description": "Map of InvoicePaymentMethodEnum to amount, set once paid" },
+          "total": { "type": "number", "format": "float", "description": "sum of snack sales + sum of session end_prices" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Employee": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "full_name": { "type": "string" },
+          "first_name": { "type": "string" },
+          "last_name": { "type": "string" },
+          "serviced": {
+            "type": "object",
+            "description": "Counts/minutes of ACTIVE+FINISHED sessions serviced by this employee",
+            "properties": {
+              "in_a_day": { "type": "integer" },
+              "minutes_in_a_day": { "type": "integer" },
+              "in_a_week": { "type": "integer" },
+              "minutes_in_a_week": { "type": "integer" },
+              "in_a_month": { "type": "integer" },
+              "minutes_in_a_month": { "type": "integer" },
+              "total": { "type": "integer" },
+              "minutes_total": { "type": "integer" }
+            }
+          }
+        }
+      },
+      "Snack": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "stock": { "type": "integer" },
+          "price": { "type": "number", "format": "float" }
+        }
+      },
+      "SnackSale": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "snack": { "type": "string", "description": "Snack name, captured at sale time" },
+          "quantity": { "type": "integer" },
+          "price": { "type": "number", "format": "float", "description": "Unit price, captured at sale time" },
+          "total": { "type": "number", "format": "float", "description": "price * quantity" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/sessions/today": {
+      "get": {
+        "tags": ["Sessions"],
+        "summary": "List today's sessions",
+        "description": "Sessions created today. A session shown as ACTIVE whose elapsed time has already passed is reported as FINISHED in this response only (not persisted).",
+        "security": [{ "authServer": [] }],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Session" } } } } }
+        }
+      }
+    },
+    "/sessions": {
+      "get": {
+        "tags": ["Sessions"],
+        "summary": "List active sessions (QUEUE or ACTIVE)",
+        "security": [{ "authServer": [] }],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Session" } } } } }
+        }
+      },
+      "post": {
+        "tags": ["Sessions"],
+        "summary": "Create a session — queues it or starts it immediately",
+        "description": "Determines tariff (MORNING before noon, EVENING after), prices it via device-service, attaches it to a QUEUE invoice (existing or new), then dispatches HandleSessionSchedule to device-service.",
+        "security": [{ "authServer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["instance_id", "serviced_by", "time"],
+                "properties": {
+                  "instance_id": { "type": "integer", "example": 3 },
+                  "serviced_by": { "type": "integer", "description": "Employee id", "example": 5 },
+                  "time": { "type": "string", "enum": ["MIN_15", "MIN_30", "MIN_60"] },
+                  "schedule": { "type": "boolean", "nullable": true, "description": "true = start immediately (status ACTIVE); false/omitted = queue (status QUEUE)" },
+                  "invoice_id": { "type": "integer", "nullable": true, "description": "Attach to an existing QUEUE invoice" },
+                  "customer_id": { "type": "integer", "nullable": true, "description": "CRM customer id" },
+                  "customer": { "type": "string", "nullable": true, "example": "Quest" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Session created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Session" } } } },
+          "422": { "description": "Validation error" },
+          "503": { "description": "device-service unreachable while pricing the session" }
+        }
+      }
+    },
+    "/sessions/{session}": {
+      "get": {
+        "tags": ["Sessions"],
+        "summary": "Get a single session",
+        "description": "Inter-service only — used by device-service (StaffClient::sessionById) to enrich schedule/overlay responses.",
+        "security": [{ "privateService": [] }],
+        "parameters": [
+          { "name": "session", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Session" } } } },
+          "404": { "description": "Not found" }
+        }
+      }
+    },
+    "/sessions/{id}": {
+      "delete": {
+        "tags": ["Sessions"],
+        "summary": "Cancel a session",
+        "description": "Requires status QUEUE or ACTIVE.",
+        "security": [{ "authServer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "204": { "description": "Canceled" },
+          "404": { "description": "Not found or not in a cancelable status" }
+        }
+      }
+    },
+    "/sessions/{id}/start": {
+      "put": {
+        "tags": ["Sessions"],
+        "summary": "Start a queued session",
+        "description": "Requires status QUEUE. Sets status ACTIVE and started_at = now().",
+        "security": [{ "authServer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Session started", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Session" } } } },
+          "404": { "description": "Not found or not QUEUE" }
+        }
+      }
+    },
+    "/sessions/{id}/finish": {
+      "put": {
+        "tags": ["Sessions"],
+        "summary": "Finish an active session",
+        "description": "Requires status ACTIVE.",
+        "security": [{ "authServer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "204": { "description": "Session finished" },
+          "404": { "description": "Not found or not ACTIVE" }
+        }
+      }
+    },
+    "/sessions/{id}/discount": {
+      "put": {
+        "tags": ["Sessions"],
+        "summary": "Set a session's discount",
+        "description": "Requires status ACTIVE or FINISHED, and the manage_discount permission. Fires no schedule event.",
+        "security": [{ "authServer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["discount"],
+                "properties": {
+                  "discount": { "type": "number", "format": "float", "minimum": 0, "maximum": 100 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": { "description": "Discount set" },
+          "403": { "description": "Caller lacks the manage_discount permission" },
+          "404": { "description": "Not found or not ACTIVE/FINISHED" }
+        }
+      }
+    },
+    "/invoices": {
+      "get": {
+        "tags": ["Invoices"],
+        "summary": "List invoices",
+        "security": [{ "authServer": [] }],
+        "parameters": [
+          { "name": "status", "in": "query", "required": false, "schema": { "type": "string", "enum": ["QUEUE", "PAYED", "CANCELED"] } },
+          { "name": "period", "in": "query", "required": false, "schema": { "type": "string", "enum": ["TODAY", "WEEK", "MONTH"] } }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Invoice" } } } } }
+        }
+      }
+    },
+    "/invoices/{id}": {
+      "put": {
+        "tags": ["Invoices"],
+        "summary": "Pay a queued invoice",
+        "description": "Requires status QUEUE. The sum of the amounts in \"method\" must exactly equal the invoice total (sessions + snack sales).",
+        "security": [{ "authServer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["method"],
+                "properties": {
+                  "method": {
+                    "type": "object",
+                    "description": "Map of payment method (CASH/CARD/BONUS) to amount. Amounts must sum to the invoice total.",
+                    "example": { "CASH": 1000, "CARD": 500 }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": { "description": "Paid" },
+          "422": { "description": "Amounts do not sum to the invoice total, or an invalid payment method key was used" },
+          "404": { "description": "Not found or not QUEUE" }
+        }
+      },
+      "delete": {
+        "tags": ["Invoices"],
+        "summary": "Cancel a queued invoice",
+        "description": "Requires status QUEUE.",
+        "security": [{ "authServer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "204": { "description": "Canceled" },
+          "404": { "description": "Not found or not QUEUE" }
+        }
+      }
+    },
+    "/employees": {
+      "get": {
+        "tags": ["Employees"],
+        "summary": "List employees",
+        "security": [{ "authServer": [] }],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Employee" } } } } }
+        }
+      }
+    },
+    "/snacks": {
+      "get": {
+        "tags": ["Snacks"],
+        "summary": "List snacks",
+        "security": [{ "authServer": [] }],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Snack" } } } } }
+        }
+      },
+      "post": {
+        "tags": ["Snacks"],
+        "summary": "Sell a snack",
+        "description": "Decrements stock and adds a SnackSale to a QUEUE invoice (existing or new — same find-or-create-queued logic as session creation).",
+        "security": [{ "authServer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["snack_id", "quantity"],
+                "properties": {
+                  "snack_id": { "type": "integer" },
+                  "quantity": { "type": "integer", "minimum": 1, "description": "Must not exceed the snack's current stock" },
+                  "invoice_id": { "type": "integer", "nullable": true },
+                  "customer_id": { "type": "integer", "nullable": true },
+                  "customer": { "type": "string", "nullable": true, "example": "Quest" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Sold", "content": { "application/json": { "schema": { "type": "object", "properties": { "invoice_id": { "type": "integer" } } } } } },
+          "422": { "description": "Not enough stock, or snack does not exist" }
+        }
+      }
+    },
+    "/tv/token": {
+      "post": {
+        "tags": ["TV"],
+        "summary": "Generate a 4-digit PIN + signed URL for the TV session board",
+        "description": "The PIN and its backing signed URL for /tv/sessions are valid for 24 hours.",
+        "security": [{ "authServer": [] }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pin": { "type": "string", "example": "4821" },
+                    "expires_at": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tv/pin/{pin}": {
+      "get": {
+        "tags": ["TV"],
+        "summary": "Resolve a PIN to its signed /tv/sessions URL",
+        "parameters": [
+          { "name": "pin", "in": "path", "required": true, "schema": { "type": "string" }, "example": "4821" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "url": { "type": "string" } } } } } },
+          "404": { "description": "Invalid or expired PIN" }
+        }
+      }
+    },
+    "/tv/sessions": {
+      "get": {
+        "tags": ["TV"],
+        "summary": "List active sessions for the TV board",
+        "description": "Not bearer-authenticated — validated as a Laravel signed URL. Obtain via /tv/token or /tv/pin/{pin}.",
+        "parameters": [
+          { "name": "signature", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "expires", "in": "query", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Session" } } } } },
+          "403": { "description": "Invalid or expired signature" }
+        }
+      }
+    },
+    "/otp/make": {
+      "get": {
+        "tags": ["OTP"],
+        "summary": "Generate an OTP (stub)",
+        "description": "Gated by otp.generate middleware (OtpClient::generateOtp), which stamps X-OTP-Identifier on the response. The handler itself is a placeholder — it returns the literal string \"make\", not real OTP generation.",
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      }
+    },
+    "/otp/submit": {
+      "get": {
+        "tags": ["OTP"],
+        "summary": "Submit/validate an OTP (stub)",
+        "description": "Gated by otp middleware (OtpClient::validate against X-OTP-Identifier/X-OTP-Code headers). The handler itself is a placeholder — it returns the literal string \"submit\".",
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      }
+    }
+  }
+}
