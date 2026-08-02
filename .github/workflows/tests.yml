@@ -1,0 +1,84 @@
+name: Tests
+
+on:
+    push:
+        branches: [ master ]
+    pull_request:
+        branches: [ master ]
+    workflow_dispatch:
+
+jobs:
+    tests:
+        runs-on: ubuntu-latest
+        name: Unit & Feature tests
+
+        services:
+            mysql:
+                image: mysql:8.0
+                env:
+                    MYSQL_ROOT_PASSWORD: root
+                ports:
+                    - 3306:3306
+                options: >-
+                    --health-cmd="mysqladmin ping -uroot -proot"
+                    --health-interval=10s
+                    --health-timeout=5s
+                    --health-retries=10
+
+        env:
+            DB_CONNECTION: mysql
+            DB_HOST: 127.0.0.1
+            DB_PORT: 3306
+            DB_DATABASE: phober_staff
+            DB_USERNAME: root
+            DB_PASSWORD: root
+            DB_SHARED_CONNECTION: mysql
+            DB_SHARED_HOST: 127.0.0.1
+            DB_SHARED_PORT: 3306
+            DB_SHARED_DATABASE: phober_shared
+            DB_SHARED_USERNAME: root
+            DB_SHARED_PASSWORD: root
+            APP_KEY: base64:cGhvYmVyLXRlc3QtYXBwLWtleS0zMi1ieXRlcyEhISE=
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Checkout shared laravel-common package
+              uses: actions/checkout@v4
+              with:
+                  repository: phobiavr/phober-laravel-common
+                  ref: master
+                  ssh-key: ${{ secrets.LARAVEL_COMMON_DEPLOY_KEY }}
+                  path: shared/laravel-common
+
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: 8.2
+                  extensions: mbstring, bcmath, pdo, pdo_mysql
+                  tools: composer:v2
+                  coverage: none
+
+            - name: Cache Composer
+              uses: actions/cache@v4
+              with:
+                  path: vendor
+                  key: ${{ runner.os }}-composer-${{ hashFiles('composer.lock') }}
+                  restore-keys: ${{ runner.os }}-composer-
+
+            - name: Install PHP dependencies
+              run: composer install --prefer-dist --no-interaction --no-progress
+
+            - name: Create test databases
+              run: |
+                  mysql -h127.0.0.1 -P3306 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS phober_staff;"
+                  mysql -h127.0.0.1 -P3306 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS phober_shared;"
+
+            - name: Load schema (own database)
+              run: php artisan migrate --force
+
+            - name: Load schema (shared database)
+              run: php artisan migrate --database=db_shared --schema-path=shared/laravel-common/database/schema/db_shared-schema.sql --force
+
+            - name: Run tests
+              run: vendor/bin/phpunit
