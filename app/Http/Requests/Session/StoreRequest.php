@@ -7,6 +7,7 @@ use Illuminate\Validation\Rule;
 use Phobiavr\PhoberLaravelCommon\Enums\SessionTimeEnum;
 
 class StoreRequest extends FormRequest {
+    /** @return array<string, array<int, mixed>> */
     public function rules(): array {
         return [
             'instance_id' => ['required'],

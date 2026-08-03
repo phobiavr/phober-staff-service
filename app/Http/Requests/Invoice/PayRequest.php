@@ -10,9 +10,10 @@ use Phobiavr\PhoberLaravelCommon\Enums\InvoicePaymentMethodEnum;
 use Phobiavr\PhoberLaravelCommon\Enums\InvoiceStatusEnum;
 
 class PayRequest extends FormRequest {
+    /** @return array<string, array<int, mixed>> */
     public function rules(): array {
         ValidatorFacade::extend('sum', function ($attribute, $value, $parameters, Validator $validator) {
-            $invoice = Invoice::where('status', InvoiceStatusEnum::QUEUE->value)->findOrFail($this->route('id'));
+            $invoice = Invoice::where('status', InvoiceStatusEnum::QUEUE->value)->findOrFail((int) $this->route('id'));
 
             $totalSum     = 0;
             $invoiceTotal = $invoice->total;
@@ -33,6 +34,7 @@ class PayRequest extends FormRequest {
         ];
     }
 
+    /** @return array<string, mixed> */
     public function paymentMethod(): array {
         return $this->input('method');
     }

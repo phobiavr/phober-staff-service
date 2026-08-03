@@ -27,6 +27,7 @@ class SessionService {
     public function __construct(private readonly InvoiceService $invoices) {
     }
 
+    /** @return Collection<int, Session> */
     public function today(): Collection {
         return Session::with(['servicedBy', 'invoice'])
             ->whereDate('created_at', today())
@@ -35,19 +36,21 @@ class SessionService {
             ->each(function (Session $session) {
                 if (
                     $session->status === SessionStatusEnum::ACTIVE->value &&
-                    now()->isAfter(Carbon::parse($session->started_at ?? $session->created_at)->addMinutes($session->time))
+                    now()->isAfter(Carbon::parse($session->started_at ?? $session->created_at)->addMinutes((int) $session->time))
                 ) {
                     $session->status = SessionStatusEnum::FINISHED->value;
                 }
             });
     }
 
+    /** @return Collection<int, Session> */
     public function active(): Collection {
         return Session::with(['servicedBy', 'invoice'])
             ->whereIn('status', [SessionStatusEnum::ACTIVE->value, SessionStatusEnum::QUEUE->value])
             ->get();
     }
 
+    /** @return Collection<int, Session> */
     public function forTV(): Collection {
         return Session::with(['servicedBy', 'invoice'])
             ->whereIn('status', [SessionStatusEnum::ACTIVE->value, SessionStatusEnum::QUEUE->value])

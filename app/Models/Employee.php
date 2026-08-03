@@ -2,18 +2,40 @@
 
 namespace App\Models;
 
+use Database\Factories\EmployeeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Phobiavr\PhoberLaravelCommon\Enums\SessionStatusEnum;
 
+/**
+ * @property int $id
+ * @property string $first_name
+ * @property string $last_name
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read string $full_name
+ * @property-read int $serviced_total
+ * @property-read int $serviced_minutes_total
+ * @property-read int $serviced_in_a_day
+ * @property-read int $serviced_minutes_in_a_day
+ * @property-read int $serviced_in_a_week
+ * @property-read int $serviced_minutes_in_a_week
+ * @property-read int $serviced_in_a_month
+ * @property-read int $serviced_minutes_in_a_month
+ * @property \Illuminate\Database\Eloquent\Collection<int, Session> $sessions
+ */
 class Employee extends Model {
+    /** @use HasFactory<EmployeeFactory> */
     use HasFactory;
 
-    public function sessions() {
+    /** @return HasMany<Session, $this> */
+    public function sessions(): HasMany {
         return $this->hasMany(Session::class, 'serviced_by');
     }
 
-    private function activeSessions() {
+    /** @return HasMany<Session, $this> */
+    private function activeSessions(): HasMany {
         return $this->sessions()->whereIn('status', [
             SessionStatusEnum::ACTIVE->value,
             SessionStatusEnum::FINISHED->value,

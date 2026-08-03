@@ -24,6 +24,7 @@ class SessionCreatedPublic implements ShouldBroadcast
         return 'SessionCreated';
     }
 
+    /** @return array<never, never> */
     public function broadcastWith(): array
     {
         return [];

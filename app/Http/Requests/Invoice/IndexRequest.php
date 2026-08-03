@@ -8,6 +8,7 @@ use Illuminate\Validation\Rule;
 use Phobiavr\PhoberLaravelCommon\Enums\InvoiceStatusEnum;
 
 class IndexRequest extends FormRequest {
+    /** @return array<string, array<int, mixed>> */
     public function rules(): array {
         return [
             'status' => ['nullable', Rule::enum(InvoiceStatusEnum::class)],

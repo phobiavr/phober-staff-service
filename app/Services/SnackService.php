@@ -10,6 +10,7 @@ class SnackService {
     public function __construct(private readonly InvoiceService $invoices) {
     }
 
+    /** @return Collection<int, Snack> */
     public function all(): Collection {
         return Snack::all();
     }

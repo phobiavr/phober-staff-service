@@ -12,6 +12,7 @@ use Phobiavr\PhoberLaravelCommon\Enums\SessionStatusEnum;
 use Phobiavr\PhoberLaravelCommon\Exceptions\ServiceUnavailableException;
 
 class InvoiceService {
+    /** @return Collection<int, Invoice> */
     public function all(?InvoiceStatusEnum $status = null, ?PeriodFilterEnum $period = null): Collection {
         $query = Invoice::query();
 
@@ -26,10 +27,11 @@ class InvoiceService {
         return $query->with(['sessions' => fn($q) => $q->where('status', '!=', SessionStatusEnum::CANCELED->value)])->get();
     }
 
+    /** @param array<string, mixed> $paymentMethod */
     public function pay(int $id, array $paymentMethod): Invoice {
         $invoice = Invoice::where('status', InvoiceStatusEnum::QUEUE->value)->findOrFail($id);
 
-        $invoice->status = InvoiceStatusEnum::PAYED;
+        $invoice->status = InvoiceStatusEnum::PAYED->value;
         $invoice->payment_method = $paymentMethod;
         $invoice->save();
 
@@ -39,7 +41,7 @@ class InvoiceService {
     public function cancel(int $id): Invoice {
         $invoice = Invoice::where('status', InvoiceStatusEnum::QUEUE->value)->findOrFail($id);
 
-        $invoice->status = InvoiceStatusEnum::CANCELED;
+        $invoice->status = InvoiceStatusEnum::CANCELED->value;
         $invoice->save();
 
         return $invoice;
@@ -79,7 +81,7 @@ class InvoiceService {
         return Invoice::create([
             'customer_id' => $customerId,
             'customer' => $customerName,
-            'status' => InvoiceStatusEnum::QUEUE,
+            'status' => InvoiceStatusEnum::QUEUE->value,
         ]);
     }
 }

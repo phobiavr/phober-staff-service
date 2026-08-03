@@ -4,12 +4,26 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @property int $id
+ * @property int|null $instance_id
+ * @property int|null $serviced_by
+ * @property int|null $time
+ * @property float|null $price
+ * @property float $discount
+ * @property float $end_price
+ * @property string $status
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $started_at
+ * @property \App\Models\Employee|null $servicedBy
+ * @property \App\Models\Invoice|null $invoice
+ */
 class SessionResource extends JsonResource {
     /**
      * Transform the resource into an array.
      *
      * @param \Illuminate\Http\Request $request
-     * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+     * @return array<string, mixed>|\Illuminate\Contracts\Support\Arrayable<array-key, mixed>|\JsonSerializable
      */
     public function toArray($request) {
         return [

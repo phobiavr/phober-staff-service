@@ -12,15 +12,15 @@ use Phobiavr\PhoberLaravelCommon\Jobs\HandleSessionSchedule;
 
 class SessionScheduleSubscriber {
     public function handleCanceled(SessionCanceled $event): void {
-        HandleSessionSchedule::dispatch($event->session->instance_id, SessionScheduleActionEnum::CANCEL)->onQueue('device');
+        HandleSessionSchedule::dispatch((int) $event->session->instance_id, SessionScheduleActionEnum::CANCEL)->onQueue('device');
     }
 
     public function handleStarted(SessionStarted $event): void {
-        HandleSessionSchedule::dispatch($event->session->instance_id, SessionScheduleActionEnum::START, $event->session->time)->onQueue('device');
+        HandleSessionSchedule::dispatch((int) $event->session->instance_id, SessionScheduleActionEnum::START, $event->session->time)->onQueue('device');
     }
 
     public function handleFinished(SessionFinished $event): void {
-        HandleSessionSchedule::dispatch($event->session->instance_id, SessionScheduleActionEnum::FINISH)->onQueue('device');
+        HandleSessionSchedule::dispatch((int) $event->session->instance_id, SessionScheduleActionEnum::FINISH)->onQueue('device');
     }
 
     public function subscribe(Dispatcher $events): void {

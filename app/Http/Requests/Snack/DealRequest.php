@@ -8,10 +8,11 @@ use Illuminate\Support\Facades\Validator as ValidatorFacade;
 use Illuminate\Validation\Validator;
 
 class DealRequest extends FormRequest {
+    /** @return array<string, array<int, mixed>> */
     public function rules(): array {
         ValidatorFacade::extend('enough_stock', function ($attribute, $value, $parameters, Validator $validator) {
             $data  = $validator->getData();
-            $snack = Snack::find($data['snack_id']);
+            $snack = Snack::find((int) $data['snack_id']);
 
             return $snack && $snack->stock >= $value;
         }, 'The requested quantity is not available in stock.');

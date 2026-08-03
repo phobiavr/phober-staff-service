@@ -60,9 +60,16 @@ return [
     */
 
     'providers' => [
+        // There's no local user model here — the "server" guard's user is
+        // always a Phobiavr\PhoberLaravelCommon\Data\AuthUser DTO set
+        // externally by AuthServerMiddleware, never resolved through this
+        // provider (JsonGuard::validate() always returns false). Pointing
+        // it at that DTO keeps it a real, resolvable class instead of the
+        // Laravel skeleton's default App\Models\User, which doesn't exist
+        // in this service.
         'users' => [
             'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', App\Models\User::class),
+            'model' => env('AUTH_MODEL', \Phobiavr\PhoberLaravelCommon\Data\AuthUser::class),
         ],
     ],
 

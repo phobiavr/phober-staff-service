@@ -10,6 +10,11 @@ parameters:
         - routes
         - shared/laravel-common/src
 
+    excludePaths:
+        # Requires spatie/laravel-medialibrary, which this service doesn't use
+        # at runtime (no HasMedia models here) and isn't installed for.
+        - shared/laravel-common/src/Media.php
+
     tmpDir: build/phpstan
 
     treatPhpDocTypesAsCertain: false

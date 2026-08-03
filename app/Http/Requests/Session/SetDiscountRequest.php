@@ -13,6 +13,7 @@ class SetDiscountRequest extends FormRequest {
         return $user?->hasPermission('manage_discount') ?? false;
     }
 
+    /** @return array<string, array<int, string>> */
     public function rules(): array {
         return [
             'discount' => ['required', 'numeric', 'min:0', 'max:100'],

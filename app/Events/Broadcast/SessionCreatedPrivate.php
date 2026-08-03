@@ -29,6 +29,7 @@ class SessionCreatedPrivate implements ShouldBroadcast
         return 'SessionCreated';
     }
 
+    /** @return array<string, int> */
     public function broadcastWith(): array
     {
         return [
