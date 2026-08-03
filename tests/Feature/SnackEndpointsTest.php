@@ -2,7 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Invoice;
+use App\Models\Session;
 use App\Models\Snack;
+use App\Models\SnackSale;
+use Illuminate\Support\Carbon;
+use Phobiavr\PhoberLaravelCommon\Enums\InvoiceStatusEnum;
 use Phobiavr\PhoberLaravelCommon\Testing\ClearsExistingRows;
 use Tests\TestCase;
 
@@ -14,7 +19,13 @@ class SnackEndpointsTest extends TestCase
     {
         parent::setUp();
 
-        $this->clearExistingRows(Snack::class);
+        $this->clearExistingRows(Session::class, SnackSale::class, Invoice::class, Snack::class);
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
     }
 
     public function test_lists_snacks(): void
@@ -48,5 +59,22 @@ class SnackEndpointsTest extends TestCase
             'snack_id' => $snack->id,
             'quantity' => 5,
         ])->assertStatus(422)->assertJsonValidationErrors(['quantity']);
+    }
+
+    public function test_rejects_a_snack_sale_against_a_queued_invoice_from_before_the_grace_window(): void
+    {
+        $this->authorizeAuthServer();
+        Carbon::setTestNow(Carbon::create(2026, 1, 15, 4, 0));
+        $invoice = Invoice::factory()->create([
+            'status'     => InvoiceStatusEnum::QUEUE->value,
+            'created_at' => Carbon::create(2026, 1, 14, 22, 0),
+        ]);
+        $snack = Snack::factory()->create(['stock' => 10]);
+
+        $this->withToken('token')->postJson('/snacks', [
+            'snack_id'   => $snack->id,
+            'quantity'   => 1,
+            'invoice_id' => $invoice->id,
+        ])->assertStatus(422)->assertJsonValidationErrors(['invoice_id']);
     }
 }

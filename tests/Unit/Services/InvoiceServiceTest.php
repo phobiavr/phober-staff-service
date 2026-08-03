@@ -8,7 +8,9 @@ use App\Models\Session;
 use App\Services\InvoiceService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Validation\ValidationException;
 use App\Models\SnackSale;
 use Phobiavr\PhoberLaravelCommon\Enums\InvoiceStatusEnum;
 use Phobiavr\PhoberLaravelCommon\Testing\ClearsExistingRows;
@@ -24,6 +26,12 @@ class InvoiceServiceTest extends TestCase
         parent::setUp();
 
         $this->clearExistingRows(Session::class, SnackSale::class, Invoice::class);
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
     }
 
     public function test_lists_invoices_filtered_by_status_and_period_excluding_canceled_sessions_from_the_eager_load(): void
@@ -107,5 +115,77 @@ class InvoiceServiceTest extends TestCase
         $result = app(InvoiceService::class)->findOrCreateQueued(null, 55, 'Quest');
 
         $this->assertSame('Quest', $result->customer);
+    }
+
+    public function test_today_cutoff_is_midnight_outside_the_grace_window(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 1, 15, 10, 0));
+
+        $cutoff = app(InvoiceService::class)->todayCutoff();
+
+        $this->assertTrue($cutoff->equalTo(Carbon::create(2026, 1, 15, 0, 0)));
+    }
+
+    public function test_today_cutoff_rolls_back_to_yesterday_during_the_grace_window(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 1, 15, 1, 30));
+
+        $cutoff = app(InvoiceService::class)->todayCutoff();
+
+        $this->assertTrue($cutoff->equalTo(Carbon::create(2026, 1, 14, 0, 0)));
+    }
+
+    public function test_assert_open_today_allows_an_invoice_created_earlier_today(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 1, 15, 10, 0));
+        $invoice = Invoice::factory()->create([
+            'status'     => InvoiceStatusEnum::QUEUE->value,
+            'created_at' => Carbon::create(2026, 1, 15, 9, 0),
+        ]);
+
+        app(InvoiceService::class)->assertOpenToday($invoice->id);
+        $this->assertTrue(true);
+    }
+
+    public function test_assert_open_today_allows_a_late_night_invoice_within_the_grace_window(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 1, 15, 1, 30));
+        $invoice = Invoice::factory()->create([
+            'status'     => InvoiceStatusEnum::QUEUE->value,
+            'created_at' => Carbon::create(2026, 1, 14, 22, 0),
+        ]);
+
+        app(InvoiceService::class)->assertOpenToday($invoice->id);
+        $this->assertTrue(true);
+    }
+
+    public function test_assert_open_today_rejects_a_late_night_invoice_once_the_grace_window_has_passed(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 1, 15, 4, 0));
+        $invoice = Invoice::factory()->create([
+            'status'     => InvoiceStatusEnum::QUEUE->value,
+            'created_at' => Carbon::create(2026, 1, 14, 22, 0),
+        ]);
+
+        $this->expectException(ValidationException::class);
+        app(InvoiceService::class)->assertOpenToday($invoice->id);
+    }
+
+    public function test_assert_open_today_ignores_invoices_that_are_not_queued(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 1, 15, 10, 0));
+        $invoice = Invoice::factory()->create([
+            'status'     => InvoiceStatusEnum::PAYED->value,
+            'created_at' => Carbon::create(2026, 1, 1, 0, 0),
+        ]);
+
+        app(InvoiceService::class)->assertOpenToday($invoice->id);
+        $this->assertTrue(true);
+    }
+
+    public function test_assert_open_today_ignores_a_nonexistent_invoice_id(): void
+    {
+        app(InvoiceService::class)->assertOpenToday(999999);
+        $this->assertTrue(true);
     }
 }

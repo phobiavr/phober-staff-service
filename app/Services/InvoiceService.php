@@ -5,13 +5,19 @@ namespace App\Services;
 use App\Enums\PeriodFilterEnum;
 use App\Models\Invoice;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Phobiavr\PhoberLaravelCommon\Clients\CrmClient;
 use Phobiavr\PhoberLaravelCommon\Enums\InvoiceStatusEnum;
 use Phobiavr\PhoberLaravelCommon\Enums\SessionStatusEnum;
 use Phobiavr\PhoberLaravelCommon\Exceptions\ServiceUnavailableException;
 
 class InvoiceService {
+    // Hours after midnight during which an invoice opened "yesterday"
+    // still counts as today's (a client may stay past 00:00).
+    private const TODAY_GRACE_HOURS = 3;
+
     /** @return Collection<int, Invoice> */
     public function all(?InvoiceStatusEnum $status = null, ?PeriodFilterEnum $period = null): Collection {
         $query = Invoice::query();
@@ -45,6 +51,29 @@ class InvoiceService {
         $invoice->save();
 
         return $invoice;
+    }
+
+    public function todayCutoff(): Carbon {
+        $now = now();
+
+        return ($now->hour < self::TODAY_GRACE_HOURS ? $now->copy()->subDay() : $now->copy())->startOfDay();
+    }
+
+    /**
+     * Guards against attaching new charges to a queued invoice from a previous business day.
+     * A non-existent id or a non-queued invoice is left untouched — findOrCreateQueued()
+     * already falls back to creating a fresh invoice for those cases.
+     */
+    public function assertOpenToday(int $invoiceId): void {
+        $invoice = Invoice::where('id', $invoiceId)
+            ->where('status', InvoiceStatusEnum::QUEUE)
+            ->first();
+
+        if ($invoice && $invoice->created_at->lt($this->todayCutoff())) {
+            throw ValidationException::withMessages([
+                'invoice_id' => 'This invoice is no longer open for today.',
+            ]);
+        }
     }
 
     /**

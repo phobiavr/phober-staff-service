@@ -16,6 +16,10 @@ class SnackService {
     }
 
     public function deal(int $snackId, int $quantity, ?int $invoiceId, ?int $customerId, string $fallbackCustomer): Invoice {
+        if ($invoiceId) {
+            $this->invoices->assertOpenToday($invoiceId);
+        }
+
         $invoice = $this->invoices->findOrCreateQueued($invoiceId, $customerId, $fallbackCustomer);
 
         $snack = Snack::findOrFail($snackId);
