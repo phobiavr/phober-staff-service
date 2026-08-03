@@ -12,6 +12,10 @@ jobs:
         runs-on: ubuntu-latest
         name: Static analysis
 
+        env:
+            APP_KEY: base64:cGhvYmVyLXRlc3QtYXBwLWtleS0zMi1ieXRlcyEhISE=
+            BROADCAST_CONNECTION: log
+
         steps:
             - uses: actions/checkout@v4
 
