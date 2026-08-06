@@ -16,7 +16,7 @@ class SessionScheduleSubscriber {
     }
 
     public function handleStarted(SessionStarted $event): void {
-        HandleSessionSchedule::dispatch((int) $event->session->instance_id, SessionScheduleActionEnum::START, $event->session->time)->onQueue('device');
+        HandleSessionSchedule::dispatch((int) $event->session->instance_id, SessionScheduleActionEnum::START, $event->session->time, $event->session->id)->onQueue('device');
     }
 
     public function handleFinished(SessionFinished $event): void {
